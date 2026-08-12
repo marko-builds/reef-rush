@@ -17,6 +17,17 @@ import { COLORS } from './level.js';
 const ASSET_BASE = 'assets/';
 const RASTER_PX = 256; // raster size for cube/pig sprites; crisp at gameplay scale
 
+// SINGLE-FILE PACKAGING (the playable-ad zero-network contract): the packager
+// injects window.__RR_ASSETS = { manifest, files: { path -> data URI } } ahead
+// of the bundle. When it exists, the manifest is read inline and every sprite
+// loads from its data URI — no fetch, no network. The multi-file hosted build
+// has no such global and keeps the normal runtime fetch path.
+const INLINE = (typeof window !== 'undefined' && window.__RR_ASSETS) || null;
+
+function assetUrl(path) {
+  return (INLINE && INLINE.files && INLINE.files[path]) || ASSET_BASE + path;
+}
+
 // Fallback hexes for placeholders, keyed by gameplay color slot (final-ish hues so
 // the color-matching logic is testable before/without art). Mirrors gameplayColors.
 const PLACEHOLDER_HEX = {
@@ -36,8 +47,9 @@ async function pathToTexture(path, px = RASTER_PX) {
 }
 
 // --- raster (PNG/JPG/...): load the file directly as a full-res texture ------
+// (a data URI from the inlined single-file map loads through the same path)
 async function rasterToTexture(path) {
-  const url = ASSET_BASE + path;
+  const url = assetUrl(path);
   let tex;
   try {
     tex = await _texLoader.loadAsync(url);  // rejects on 404 / decode error
@@ -140,9 +152,13 @@ export class Assets {
     const a = new Assets();
     let manifest;
     try {
-      const res = await fetch(ASSET_BASE + 'manifest.json');
-      if (!res.ok) throw new Error(`manifest HTTP ${res.status}`);
-      manifest = await res.json();
+      if (INLINE && INLINE.manifest) {
+        manifest = INLINE.manifest; // single-file build: zero network
+      } else {
+        const res = await fetch(ASSET_BASE + 'manifest.json');
+        if (!res.ok) throw new Error(`manifest HTTP ${res.status}`);
+        manifest = await res.json();
+      }
     } catch (e) {
       // No manifest at all -> still don't crash: empty registry, callers fall back.
       console.warn('[assets] manifest missing, running on placeholders only:', e.message);
