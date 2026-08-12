@@ -15,8 +15,6 @@ import { Assets } from './assets.js';
 import { Seascape } from './seascape.js';
 import { VfxLayer } from './vfx.js';
 import { AudioBus } from './audio.js';
-import { SpinWheel } from './spin.js';
-import { applyCarryover, CARRY_KEY } from './carryover.js';
 import { clamp01, easeOutBack, easeOutCubic } from './easing.js';
 
 // ---------------------------------------------------------------------------
@@ -25,21 +23,12 @@ import { clamp01, easeOutBack, easeOutCubic } from './easing.js';
 const appEl = document.getElementById('app');
 const uiEl = document.getElementById('ui');
 const hudEl = document.getElementById('hud');
-const bannerEl = document.getElementById('banner');
-const retryHintEl = document.getElementById('retryHint');
-// Phase 5 (5.11) screens
-const levelHudEl = document.getElementById('levelHud');
+// End-of-game screens + the first-load hint
 const titleScreenEl = document.getElementById('titleScreen');
-const nextBannerEl = document.getElementById('nextBanner');
-const nextTitleEl = document.getElementById('nextTitle');
-const nextNameEl = document.getElementById('nextName');
-const nextCoinsEl = document.getElementById('nextCoins');
-const nextTapEl = document.getElementById('nextTap');
 const winScreenEl = document.getElementById('winScreen');
 const winVignetteEl = document.getElementById('winVignette');
-const winCoinsEl = document.getElementById('winCoins');
 const loseScreenEl = document.getElementById('loseScreen');
-const loseNameEl = document.getElementById('loseName');
+const hintEl = document.getElementById('hint');
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -55,6 +44,15 @@ scene.background = new THREE.Color(0x0d5d77);
 // lane rack (with the reserve rows off-screen below the bottom edge).
 const VIEW_HEIGHT = 16;
 const CAMERA_Y = -2.25;
+// PLAYABLE-AD portrait fix: the source game was framed for desktop aspects.
+// The playfield (belt ring ±5.1, lane heads ±4) must stay on-screen and
+// tappable on a narrow phone, so the camera guarantees a MINIMUM HALF-WIDTH
+// by zooming OUT (growing the effective view height) when the aspect is
+// narrower than MIN_HALF_W allows. Wide screens are unchanged.
+const MIN_HALF_W = 5.8;
+function effectiveHalfH(aspect) {
+  return Math.max(VIEW_HEIGHT / 2, MIN_HALF_W / aspect);
+}
 let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
 camera.position.set(0, CAMERA_Y, 5);
 
@@ -63,7 +61,7 @@ function resize() {
   const h = window.innerHeight;
   renderer.setSize(w, h);
   const aspect = w / h;
-  const halfH = VIEW_HEIGHT / 2;
+  const halfH = effectiveHalfH(aspect);
   const halfW = halfH * aspect;
   camera.left = -halfW;
   camera.right = halfW;
@@ -72,7 +70,12 @@ function resize() {
   camera.updateProjectionMatrix();
   // Phase 5 fix 5.5: keep the sea gradient pinned flush to the camera's bottom
   // frustum edge through resizes (no-op before the async boot builds it).
-  if (seascape) seascape.layout();
+  // The seascape reads the EFFECTIVE view height so the gradient/coral band
+  // pin to the real frame on narrow screens too.
+  if (seascape) {
+    seascape.viewH = halfH * 2;
+    seascape.layout();
+  }
 }
 window.addEventListener('resize', resize);
 
@@ -85,35 +88,12 @@ window.addEventListener('resize', resize);
 // module-scope so the render-loop helpers below can close over them. (Top-level
 // await is unavailable in the build target, hence the explicit boot().)
 let assets, seascape, board, conveyor, pigs;
-let beltFlow, slotRack, tapRings, vfx, treasure, spin;
+let beltFlow, slotRack, tapRings, vfx, treasure;
 let labels = new Map();
 
-// The 5-LEVEL SEQUENCE (spec re-lock #3) is carried in the URL hash (#level-N):
-// win -> tap bumps the hash + reloads into the next level; lose -> tap reloads
-// the SAME level. Each level stays a clean single-shot boot (graders can jump
-// straight to e.g. #level-4).
-const levelIndex = (() => {
-  const m = /level-(\d+)/.exec(location.hash);
-  const n = m ? parseInt(m[1], 10) : 1;
-  return Math.min(Math.max(n, 1), LEVELS.length);
-})();
-
-// Phase 4 SPIN CARRY-FORWARD (spec: Level-clear spin): the previous level's
-// wheel result rides the same sessionStorage channel as the coin bank, and is
-// CONSUMED here (read + deleted) — a lose-retry reboots the AUTHORED level
-// without the perk (spec: Expiry). applyCarryover derives this boot's
-// EFFECTIVE level (mine injected at a random valid cell / wraps pre-peeled);
-// the bonus slot bumps CONFIG.waitingSlots for this boot only (each level is
-// a fresh module load); the golden head is handed to PigManager below.
-const spinCarry = (() => {
-  try {
-    const raw = sessionStorage.getItem(CARRY_KEY);
-    sessionStorage.removeItem(CARRY_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-})();
-const level = applyCarryover(LEVELS[levelIndex - 1], spinCarry);
-if (spinCarry?.bonusSlot) CONFIG.waitingSlots = 6;
+// ONE authored level (the playable ad): win -> end card, lose -> retry card;
+// a retry is a clean single-shot reboot via location.reload().
+const level = LEVELS[0];
 
 // v3 AUDIO: one synthesized WebAudio bus (ambient bed + event sfx + one mute).
 // Constructed eagerly (no AudioContext yet — that's created lazily on the first
@@ -129,12 +109,12 @@ async function boot() {
   // L0/L1: sea gradient + drifting parallax life + vignette behind the playfield.
   // CAMERA_Y so the gradient pins to the REAL visible frame (Phase 5 fix 5.5):
   // the frame is [CAMERA_Y - h/2, CAMERA_Y + h/2], not centered on y=0.
-  seascape = new Seascape(scene, assets, VIEW_HEIGHT, CAMERA_Y);
+  seascape = new Seascape(scene, assets,
+    effectiveHalfH(window.innerWidth / window.innerHeight) * 2, CAMERA_Y);
 
   board = new Board(scene, assets, level);
   conveyor = new Conveyor(board);
-  pigs = new PigManager(scene, board, conveyor, assets, level, undefined,
-    { goldenHead: spinCarry?.golden === true });
+  pigs = new PigManager(scene, board, conveyor, assets, level);
   treasure = buildTreasure();
 
   buildBeltVisual();
@@ -144,27 +124,22 @@ async function boot() {
   // v3 JUICE layer: shots, cube-pop bursts, muzzle puffs, slot flourishes, and
   // the win/lose transitions. Driven off pigs.vfx[] + pigs.state (render-safe).
   vfx = new VfxLayer(scene, assets, board, conveyor, pigs, slotRack,
-    { finaleRain: levelIndex === LEVELS.length }); // L5 treasure: 32-coin rain
-  // Phase 4 LEVEL-CLEAR SPIN (spec: Level-clear spin): the bonus-wheel
-  // overlay, centered on the screen (the camera's rest position). Started on
-  // the won edge of levels 1-4 only; results apply via applySpinResult.
-  // Phase 5 player direction: the wheel sits on the BOARD's center (blocks +
-  // conveyor ring), not the screen center, with segment icons from the registry.
-  spin = new SpinWheel(scene,
-    (board.bounds.minX + board.bounds.maxX) / 2,
-    (board.bounds.minY + board.bounds.maxY) / 2,
-    applySpinResult, assets);
-  // Phase 5 (5.11): the level pill badge (replaces the debug text block).
-  levelHudEl.textContent = `Level ${levelIndex}/${LEVELS.length} \u2014 ${level.name}`;
-  // Title screen: only on a FRESH session's level 1 (the sea runs live behind
-  // it; one tap anywhere starts the game). Retries / later levels skip it.
-  if (levelIndex === 1 && !sessionStorage.getItem('rr-title-shown')) {
+    { finaleRain: true }); // treasure win: 32-coin rain
+  // Title screen: on a FRESH session only (the sea runs live behind it; one
+  // tap anywhere starts the game). A lose-retry reload skips it.
+  if (!safeGetItem('rr-title-shown')) {
     titleActive = true;
     titleScreenEl.classList.add('in');
+  } else {
+    showHint(); // no title veil -> the first-load hint shows immediately
   }
   resize();
   tick();
 }
+
+// sessionStorage can throw inside some ad webviews \u2014 never let that kill boot.
+function safeGetItem(k) { try { return sessionStorage.getItem(k); } catch { return null; } }
+function safeSetItem(k, v) { try { sessionStorage.setItem(k, v); } catch { /* no-op */ } }
 
 // TREASURE centerpiece (level 5 only): the golden pearl-in-shell sprite sitting
 // in the authored center pocket, BEHIND the reef tiles — it peeks out as the
@@ -562,50 +537,28 @@ function tickReject(dt) {
   if (hudFlash > 0) hudFlash = Math.max(0, hudFlash - dt);
 }
 
-// v3 LEVEL FLOW: when the game is over, any tap or the Enter / R key advances —
-// a WIN moves to the next level (wrapping to level 1 after the level-5 treasure
-// win), a LOSS retries the SAME level. Robust single-shot boots via hash+reload.
+// AD FLOW: a LOSS retries via a clean single-shot reload (the replay button or
+// Enter / R). A WIN parks on the end card — the CTA is the action there, so
+// tap-anywhere deliberately does nothing once the game is won.
 // `restarted` guards against a double-fire (e.g. tap + key landing the same frame).
 let restarted = false;
 function tryRetry() {
   if (restarted) return false;
-  if (pigs.state !== 'won' && pigs.state !== 'lost') return false;
-  // Phase 4 SPIN gate (spec: Level-clear spin): on a level-1..4 win the wheel
-  // owns the screen — taps are SWALLOWED until the result banner is up; the
-  // first tap at the banner dismisses it AND advances (this fall-through).
-  // Lose and the level-5 treasure win never enter this branch.
-  if (pigs.state === 'won' && levelIndex < LEVELS.length && spin) {
-    if (!spin.atBanner()) return true; // wheel pending/in motion: no advance yet
-    spin.dismiss();
-  }
+  if (pigs.state !== 'lost') return false;
   restarted = true;
-  if (pigs.state === 'won') {
-    const next = levelIndex < LEVELS.length ? levelIndex + 1 : 1;
-    location.hash = `level-${next}`;
-  }
   location.reload();
   return true;
 }
 
-// Phase 4 SPIN drive + result application (spec: Level-clear spin).
-// updateSpin: edge-start the wheel on a level-1..4 win, then advance its
-// timeline. applySpinResult (fired ONCE at spin settle): coin segments add to
-// the run total with the normal roll-up and RE-BANK it (updateCoins banked the
-// pre-spin total on the won edge; the next boot must start post-spin); carry
-// segments write the one-shot spin-carry flags the next boot consumes.
-function updateSpin(dt) {
-  if (!spin) return;
-  if (pigs.state === 'won' && levelIndex < LEVELS.length) spin.start();
-  spin.update(dt);
-}
-
-function applySpinResult(seg) {
-  if (seg.coins) {
-    addCoins(seg.coins);
-    sessionStorage.setItem(COIN_KEY, String(coins));
-  }
-  if (seg.carry) {
-    sessionStorage.setItem(CARRY_KEY, JSON.stringify({ [seg.carry]: true }));
+// The CTA (end card + retry card): the MRAID container opens the click-through
+// via mraid.open; a plain browser (GitHub Pages) gets window.open. Honest demo
+// framing — the link is the maker's site, not a fake store listing.
+const CTA_URL = 'https://markostankovic.org';
+function openCta() {
+  if (typeof mraid !== 'undefined' && mraid && typeof mraid.open === 'function') {
+    mraid.open(CTA_URL);
+  } else {
+    window.open(CTA_URL, '_blank');
   }
 }
 
@@ -614,20 +567,50 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   // starts the ambient bed. Idempotent + null-safe (no-op if WebAudio is absent).
   audio.resume();
   audio.startAmbient();
-  // Phase 5 (5.11): the title screen swallows its dismissing tap (one per
-  // session — retries and later levels boot straight into play).
+  // The title screen swallows its dismissing tap (one per session — a
+  // lose-retry reload boots straight into play). The first-load hint takes
+  // its place until the first REAL gameplay tap dismisses it.
   if (titleActive) {
     titleActive = false;
-    sessionStorage.setItem('rr-title-shown', '1');
+    safeSetItem('rr-title-shown', '1');
     titleScreenEl.classList.add('out');
     setTimeout(() => titleScreenEl.classList.remove('in'), 320);
+    showHint();
     return;
   }
+  dismissHint();
   // Game over -> this tap is a RETRY, not a launch (onTap already no-ops off
   // 'playing', so an in-game launch tap is never affected by this branch).
   if (tryRetry()) return;
   onTap(e.clientX, e.clientY);
 });
+
+// ---------------------------------------------------------------------------
+// FIRST-LOAD HINT: a pulsing ring over the tappable queue row (the 4 lane
+// heads) + one line of instruction. Shown once play is interactive (after the
+// title veil, or immediately on a reload), dismissed on the first tap.
+// ---------------------------------------------------------------------------
+let hintActive = false;
+function showHint() {
+  if (!hintEl || restarted) return;
+  hintActive = true;
+  hintEl.classList.add('in');
+}
+function dismissHint() {
+  if (!hintActive) return;
+  hintActive = false;
+  hintEl.classList.remove('in');
+}
+function updateHint() {
+  if (!hintActive || !pigs) return;
+  const heads = pigs.laneHeads();
+  if (!heads.length) return;
+  // Ring the FIRST lane head (leftmost tappable fish); the text sits below.
+  const p = heads[0].pig.mesh.position;
+  const s = worldToScreen(p.x, p.y);
+  hintEl.style.left = s.x + 'px';
+  hintEl.style.top = s.y + 'px';
+}
 
 // ---------------------------------------------------------------------------
 // MUTE: keyboard 'm' + a small on-screen button (the entire audio UI). The game
@@ -724,31 +707,25 @@ function updateHud() {
   // Reskin language: the shooters are BAIT in every player-facing string.
   const slotsFull = pigs.occupiedSlots() >= CONFIG.waitingSlots;
   hudEl.textContent = hudFlash > 0
-    ? 'BELT FULL — wait for a bait to finish its lap'
+    ? 'BELT FULL. Wait for a bait to finish its lap.'
     : slotsFull
-      ? 'buckets full — a returning bait with ammo will jam'
+      ? 'Buckets full. A returning bait with ammo will jam.'
       : '';
   hudEl.style.color = hudFlash > 0 ? '#ff8a6a' : '#c8924a';
 }
 
-// Phase 5 (5.11): the end-state SCREENS replace the old plain-text banner.
-// - won, levels 1-4: a compact NEXT-LEVEL banner slides in from the top
-//   (easeOutBack 320ms, CSS-driven) with the level name + this level's coin
-//   delta; it steps aside while the bonus wheel owns the center and returns
-//   with the TAP TO CONTINUE prompt at the wheel's result banner.
-// - won, level 5: the TREASURE screen — a golden radial vignette fades in over
-//   1s while the existing treasure pop + 32-coin rain play; card shows the run
-//   total + PLAY AGAIN.
-// - lost: the JAMMED card — matter-of-fact, cheerful, with TRY AGAIN.
-// Taps anywhere still advance/retry (the screens are pointer-events:none except
-// the buttons); Enter / R keep working via tryRetry.
+// END-STATE SCREENS (the ad flow):
+// - won: the treasure reveal + coin rain play, a golden radial vignette fades
+//   in over 1s, then the END CARD (Reef Rush + one line + CTA).
+// - lost: the SO CLOSE card — replay button + the same CTA.
+// The screens are pointer-events:none except the buttons; Enter / R retry a
+// loss via tryRetry.
 let titleActive = false;       // title overlay shown, first tap dismisses it
 let bannerStateShown = 'playing';
 function updateBanner() {
   const state = pigs.state;
   if (state === 'playing') {
     if (bannerStateShown !== 'playing') {
-      nextBannerEl.classList.remove('in');
       winScreenEl.classList.remove('in');
       winVignetteEl.classList.remove('in');
       loseScreenEl.classList.remove('in');
@@ -758,58 +735,30 @@ function updateBanner() {
   }
   if (bannerStateShown !== state) {
     bannerStateShown = state;
+    dismissHint();
     if (state === 'won') {
-      if (levelIndex < LEVELS.length) {
-        // content prepared at the win edge; the popup APPEARS only once the
-        // wheel has settled (player direction) — see the interplay block below.
-        nextTitleEl.textContent = `Level ${levelIndex} cleared!`;
-        nextNameEl.textContent = level.name;
-      } else {
-        winCoinsEl.textContent = `${coins} coins collected this run`;
-        winScreenEl.classList.add('in');
-        winVignetteEl.classList.add('in'); // golden vignette, 1s fade
-      }
+      winScreenEl.classList.add('in');
+      winVignetteEl.classList.add('in'); // golden vignette, 1s fade
     } else {
-      loseNameEl.textContent = level.name;
       loseScreenEl.classList.add('in');
     }
   }
-  // Player direction (final): the level-cleared popup shows for the FIRST
-  // time only after the wheel is spun — it bounces up at the board center
-  // (over the parked wheel) once the result banner is live. The coins line
-  // updates live, so the wheel's own coin reward is included in the total.
-  if (state === 'won' && levelIndex < LEVELS.length) {
-    const atBanner = spin && spin.active ? spin.atBanner() : true; // no wheel -> show
-    if (atBanner) nextCoinsEl.textContent = `+${coins - coinBank} coins`;
-    nextBannerEl.classList.toggle('in', atBanner);
-  }
 }
-// (the legacy #banner / #retryHint elements stay hidden — replaced by the
-// Phase 5 screens; Enter / R retry keys still route through tryRetry.)
 
 // ---------------------------------------------------------------------------
 // Phase 4 COIN ECONOMY (spec: Coin economy — styled build only). Render-side
 // ONLY: blocks are counted off the SAME render-safe pigs.vfx[] 'fire' events the
 // audio/VFX layers read (one event = one destroyed small block) — no gameplay
 // file is touched by the counter. The HUD number ROLLS UP (600ms easeOutCubic),
-// never snaps. The run total persists across the 5-level hash+reload sequence
-// via sessionStorage: BANKED on level-clear; a lose-retry reboots to the
-// start-of-level bank (the failed attempt's coins are not kept); the post-L5
-// "play again" wrap resets the bank (a fresh run).
+// never snaps. ONE level, no persistence: every boot starts at 0.
 // ---------------------------------------------------------------------------
 const coinCountEl = document.getElementById('coinCount');
-const COIN_KEY = 'rr-run-coins';
 const COIN_ROLL_DUR = 0.6; // 600ms roll-up, easeOutCubic
-const coinBank = (() => {
-  const n = parseInt(sessionStorage.getItem(COIN_KEY) ?? '0', 10);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-})();
-let coins = coinBank;        // live run total (bank + this level's earnings)
-let coinsShown = coinBank;   // displayed value, eased toward `coins`
-let coinRollFrom = coinBank; // value the current roll started from
+let coins = 0;        // live run total (this level's earnings)
+let coinsShown = 0;   // displayed value, eased toward `coins`
+let coinRollFrom = 0; // value the current roll started from
 let coinRollAge = COIN_ROLL_DUR; // >= dur means settled
-let coinsBanked = false;     // edge latch: bank exactly once per win
-if (coinCountEl) coinCountEl.textContent = String(coinBank);
+if (coinCountEl) coinCountEl.textContent = '0';
 
 function addCoins(n) {
   if (n <= 0) return;
@@ -834,12 +783,6 @@ function updateCoins(dt) {
       else if (ev.type === 'mineExplode') for (const b of ev.blocks) earned += coinAward(b.blockColor);
     }
     if (earned > 0) addCoins(earned);
-  }
-  if (pigs.state === 'won' && !coinsBanked) {
-    coinsBanked = true;
-    // L1-4 clear -> bank the run total for the next level's boot; the L5 clear
-    // ends the run, so the next boot (play-again wrap to L1) starts at 0.
-    sessionStorage.setItem(COIN_KEY, levelIndex < LEVELS.length ? String(coins) : '0');
   }
   coinRollAge += dt;
   const p = clamp01(coinRollAge / COIN_ROLL_DUR);
@@ -875,24 +818,11 @@ function updateAudio() {
   }
   // State-transition stings (edge-triggered so they fire exactly once).
   if (pigs.state !== audioState) {
-    if (pigs.state === 'won') {
-      // L1-4: the level-clear flourish (the wheel follows); L5: the treasure.
-      if (levelIndex < LEVELS.length) audio.onLevelClear();
-      else audio.onTreasure();
-    } else if (pigs.state === 'lost') audio.onLose();
+    if (pigs.state === 'won') audio.onTreasure();
+    else if (pigs.state === 'lost') audio.onLose();
     audioState = pigs.state;
   }
-  // Phase 5: bonus-wheel beats, edge-triggered off the spin's phase.
-  if (spin) {
-    const ph = spin.active ? spin.phase : 'idle';
-    if (ph !== spinPhaseSeen) {
-      if (ph === 'spin') audio.onSpinStart();
-      else if (ph === 'banner') audio.onSpinSettle();
-      spinPhaseSeen = ph;
-    }
-  }
 }
-let spinPhaseSeen = 'idle'; // last spin phase a sound was fired for
 
 // ---------------------------------------------------------------------------
 // Delta-timed render loop.
@@ -914,7 +844,7 @@ function tick() {
   updateLabels();
   updateHud();
   updateBanner(dt);
-  updateSpin(dt);  // Phase 4: the level-clear bonus wheel (won edge, L1-4)
+  updateHint();
   // Phase 4 mine-explosion SCREEN SHAKE: the VfxLayer owns the decaying jitter;
   // we just offset the camera by it each frame (zero when no shake is live).
   camera.position.x = vfx.shakeOffset.x;
@@ -925,17 +855,24 @@ function tick() {
 
 // Kick off async asset load -> build -> run. Expose the game once built for a
 // headless/console logic check (used during verification).
-// Phase 5 (5.11): the lose/win cards' buttons ride the same retry path as a
-// tap anywhere (tryRetry gates on state, so they are inert during play).
-for (const id of ['winRetryBtn', 'loseRetryBtn']) {
-  const btn = document.getElementById(id);
+// The retry button rides the same path as a tap anywhere (tryRetry gates on
+// state, so it is inert during play); the CTA buttons open the click-through.
+{
+  const btn = document.getElementById('loseRetryBtn');
   if (btn) btn.addEventListener('click', (e) => {
     e.stopPropagation();
     audio.resume();
     tryRetry();
   });
 }
+for (const id of ['winCtaBtn', 'loseCtaBtn']) {
+  const btn = document.getElementById(id);
+  if (btn) btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openCta();
+  });
+}
 
 boot().then(() => {
-  window.__game = { board, conveyor, pigs, CONFIG, level, levelIndex };
+  window.__game = { board, conveyor, pigs, CONFIG, level };
 });

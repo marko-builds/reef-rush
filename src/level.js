@@ -46,139 +46,31 @@ export const GRID_ROWS = 9;
 // '.' = EMPTY cell (no block). PATTERN[0] is the TOP row (row GRID_ROWS-1).
 const CHAR_TO_COLOR = { A: 'C1', B: 'C2', C: 'C3', D: 'C4', W: 'W', M: 'M' };
 
-// The authored 5-level sequence (spec: "The 5 levels").
+// The ONE authored playable-ad level: a gold ring guards the center treasure
+// pocket, one mine sits in the ring's bottom edge for the blast moment, two
+// coral accents teach color matching. Both colors are exposed from the first
+// second (gold from above, coral + the mine from below), so a first-try player
+// is always able to act; the mine blast clears the ring's lower half in one
+// bang. Tuned for a 20-30 second first-try win.
 export const LEVELS = [
   {
     id: 1,
-    name: 'Halves',
-    colors: ['C1', 'C2'],
-    // The simple opener: left 5 columns C1, right 4 C2 — both colors exposed
-    // from every edge, no burial traps. Teaches tap -> lap -> park.
+    name: 'Reef Rush',
+    colors: ['C1', 'C4'],
     pattern: [
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
+      '.........',
+      '.........',
+      '...DDD...',
+      '...D.D...',
+      '...DMD...',
+      '.A.....A.',
+      '.........',
+      '.........',
+      '.........',
     ],
-  },
-  {
-    id: 2,
-    name: 'Bullseye',
-    colors: ['C1', 'C2'],
-    // The original locked level: CONCENTRIC RINGS — outer ring C1 (exposed
-    // first), C2 starts fully buried. Flooding C2 early parks pigs -> lockup.
-    // Phase 4: ONE MINE at cell (4,6) — third ring, buried behind the outer A
-    // ring + the B ring (spec: Mine blocks; START-BURIED keeps the graded
-    // flood-lockup reachable). Exposing it blasts the ring stack open.
-    pattern: [
-      'AAAAAAAAA',
-      'ABBBBBBBA',
-      'ABAAMAABA',
-      'ABABBBABA',
-      'ABABABABA',
-      'ABABBBABA',
-      'ABAAAAABA',
-      'ABBBBBBBA',
-      'AAAAAAAAA',
-    ],
-    // Phase 5 SEAWEED WRAPS (spec: Seaweed-wrapped blocks, L2 addition):
-    // ROW 1 cols 1-7 — the inner B ring's bottom band. Surfaces after the
-    // outer peel; gives the spin's SEAWEED CLEARED carry an effect on L2.
-    wraps: [
-      { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }, { col: 4, row: 1 },
-      { col: 5, row: 1 }, { col: 6, row: 1 }, { col: 7, row: 1 },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Checkerboard',
-    colors: ['C1', 'C2'],
-    // The reference-screenshot board: alternating cells. Every sub-line front
-    // flips color every big block — constant small decisions.
-    // Phase 4: two WILD (jellyfish) cells at (2,2) and (6,6) — inner positions,
-    // typically buried until mid-peel, so the escape valve appears exactly when
-    // the lanes start clogging (spec: Wild blocks; max 2 per level) — plus ONE
-    // MINE dead center at (4,4), the deepest-buried cell on the board: digging
-    // to it is rewarded with a 3x3-cell blast (spec: Mine blocks).
-    pattern: [
-      'ABABABABA',
-      'BABABABAB',
-      'ABABABWBA',
-      'BABABABAB',
-      'ABABMBABA',
-      'BABABABAB',
-      'ABWBABABA',
-      'BABABABAB',
-      'ABABABABA',
-    ],
-  },
-  {
-    id: 4,
-    name: 'Currents',
-    colors: ['C1', 'C2', 'C3'],
-    // Introduces C3: diagonal stripes ((col+row) % 3). All three colors exposed
-    // on every edge but interleaved — peel order matters everywhere.
-    // Phase 4: two WILD cells at (2,6) and (6,2) (off-center, mid-stripe; the
-    // diagonals expose them early-ish so the valve helps the 3-color juggling)
-    // + ONE MINE at the center (4,4) (spec: Wild blocks / Mine blocks).
-    pattern: [
-      'ABCABCABC',
-      'BCABCABCA',
-      'CAWCABCAB',
-      'ABCABCABC',
-      'BCABMABCA',
-      'CABCABCAB',
-      'ABCABCWBC',
-      'BCABCABCA',
-      'CABCABCAB',
-    ],
-    // Phase 4 SEAWEED WRAPS (spec: Seaweed-wrapped blocks; levels 4-5 only, max
-    // 1 row per level): ROW 4 — the middle row's 8 color cells. The mine at
-    // (4,4) is NOT listed (mines can't wrap). The row's ends sit on the belt
-    // edges so the armor reads immediately; every mid-stripe peel meets it.
-    wraps: [
-      { col: 0, row: 4 }, { col: 1, row: 4 }, { col: 2, row: 4 }, { col: 3, row: 4 },
-      { col: 5, row: 4 }, { col: 6, row: 4 }, { col: 7, row: 4 }, { col: 8, row: 4 },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Treasure Rings',
-    colors: ['C1', 'C2', 'C3', 'C4'],
-    // The finale, introduces C4: concentric rings around a center pocket that
-    // holds the TREASURE (the achievement). C4 starts fully buried behind three
-    // rings — flooding it early is the lockup trap; peeling A->B->C->D reveals
-    // the treasure for the final win celebration.
-    // Phase 4: two WILD cells at (4,7)/(4,1) in the B ring + ONE MINE at (4,6)
-    // in the C ring. ALL START-BURIED behind the outer A ring — required, or an
-    // exposed W/M would make every color reachable and the graded flood-lockup
-    // on this level would become unreachable (spec: Wild blocks / Mine blocks).
-    pattern: [
-      'AAAAAAAAA',
-      'ABBBWBBBA',
-      'ABCCMCCBA',
-      'ABCDDDCBA',
-      'ABCD.DCBA',
-      'ABCDDDCBA',
-      'ABCCCCCBA',
-      'ABBBWBBBA',
-      'AAAAAAAAA',
-    ],
-    treasure: { col: 4, row: 4 },
-    // Phase 4 SEAWEED WRAPS (spec): ROW 2 — the 'A B CCCCC B A' band directly
-    // below the treasure pocket, all 9 cells. The edge A's are exposed at start
-    // (the mechanic stays visible in the finale); the wrapped C band doubles
-    // the cost of the lower approach without touching the C4 flood-lockup.
-    wraps: [
-      { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 }, { col: 3, row: 2 },
-      { col: 4, row: 2 }, { col: 5, row: 2 }, { col: 6, row: 2 }, { col: 7, row: 2 },
-      { col: 8, row: 2 },
-    ],
+    // The center '.' pocket (pattern row 3, col 4 -> world row 5) holds the
+    // treasure, revealed by the final clear (the existing finale mechanic).
+    treasure: { col: 4, row: 5 },
   },
 ];
 
@@ -233,9 +125,9 @@ export const CONFIG = {
   waitingSlots: 5,       // the "X/5"
   laneCount: 4,          // independent queue lanes (only the 4 heads launchable)
   laneDepth: 6,          // pigs kept per lane (3 visible + 3 off-screen reserve)
-  goldenChance: 0.03,    // Phase 4 GOLDEN PIG (spec: Golden pig): per reserve
-                         // mint, the chance the pig comes out GOLDEN (color 'G',
-                         // fixed ammo below) instead of a weighted color roll.
+  goldenChance: 0,       // golden pigs are OFF in the playable-ad build (the
+                         // pig_g sprite is dropped by the asset diet; one level
+                         // never rolls the bonus anyway).
   goldenAmmo: 5,         // a golden pig's fixed ammo (1 ammo = 1 block hit, as
                          // for every pig; the pierce's 2nd hit needs ammo left).
   ammoMin: 8,            // infinite-reserve ammo roll, uniform [ammoMin, ammoMax].
