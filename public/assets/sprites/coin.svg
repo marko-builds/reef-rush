@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- coin.svg — FoF gold coin (Phase 4 coin economy). Original art: a warm gold
+       disc with a darker rim, an embossed inner ring, a pearl-star emboss and a
+       gloss shine. Reads at 22px (HUD icon) and at CELL*0.35 (coin-rain). -->
+  <defs>
+    <radialGradient id="face" cx="0.38" cy="0.34" r="0.85">
+      <stop offset="0" stop-color="#ffe98a"/>
+      <stop offset="0.55" stop-color="#ffc91f"/>
+      <stop offset="1" stop-color="#e0a23c"/>
+    </radialGradient>
+  </defs>
+  <!-- rim -->
+  <circle cx="64" cy="64" r="58" fill="#a96f12"/>
+  <circle cx="64" cy="64" r="54" fill="url(#face)"/>
+  <!-- embossed inner ring -->
+  <circle cx="64" cy="64" r="42" fill="none" stroke="#c78f1a" stroke-width="5"/>
+  <!-- embossed star (the FoF treasure motif) -->
+  <path d="M64 42 L70 58 L87 58 L73 68 L78 84 L64 74 L50 84 L55 68 L41 58 L58 58 Z"
+        fill="#e8b04a" stroke="#c78f1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- gloss shine -->
+  <path d="M30 40 A40 40 0 0 1 58 22" fill="none" stroke="#fff6cf"
+        stroke-width="9" stroke-linecap="round" opacity="0.85"/>
+</svg>

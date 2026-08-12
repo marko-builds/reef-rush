@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 50" width="80" height="50">
+  <!-- background fish (cool teal) — desaturated, parallax, BEHIND playfield. Faces +X. -->
+  <g stroke="#2b6f86" stroke-width="2.5" stroke-linejoin="round">
+    <path fill="#5fbcd6" d="M8 25 l18 -12 0 24 z"/>
+    <ellipse cx="46" cy="25" rx="26" ry="16" fill="#7fd0e6"/>
+    <path fill="#5fbcd6" d="M50 10 q10 -6 16 2 q-8 2 -12 8 z"/>
+    <circle cx="62" cy="22" r="3.5" fill="#fff"/><circle cx="62.5" cy="22" r="1.6" fill="#143844"/>
+  </g>
+</svg>

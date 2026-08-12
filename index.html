@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fish of Fortune — v3 styled reef</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        /* v3: deep turquoise base so any uncovered edge reads as sea, not grey. */
+        background: #0d5d77;
+        overflow: hidden;
+        font-family: system-ui, sans-serif;
+      }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; }
+
+      /* DOM overlay for text (ammo, counters). v3: ammo number sits on the reef
+         critter, so it gets a strong dark halo to stay legible over bright sprites. */
+      #ui { position: fixed; inset: 0; pointer-events: none; }
+      .label {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        /* layered dark halo: readable over any candy-bright critter or the sea. */
+        text-shadow:
+          0 0 2px #04303d, 0 0 3px #04303d, 0 0 4px #04303d,
+          0 1px 1px #000, 0 -1px 1px #000;
+        user-select: none;
+      }
+      #hud {
+        position: fixed;
+        top: 58px;
+        left: 12px;
+        color: #eafcff;
+        font-size: 13px;
+        line-height: 1.5;
+        text-shadow: 0 1px 3px #04303d, 0 0 4px #04303d;
+        white-space: pre;
+      }
+      /* Mute toggle — the entire audio UI (one button). Top-right glassy bubble
+         that reads over the bright sea; clickable (pointer-events on). */
+      #mute {
+        position: fixed;
+        top: 10px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(8, 60, 76, 0.55);
+        color: #eafcff;
+        font-size: 19px;
+        line-height: 40px;
+        text-align: center;
+        cursor: pointer;
+        -webkit-user-select: none;
+        user-select: none;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(234, 252, 255, 0.25);
+        transition: background 0.15s ease, transform 0.1s ease;
+      }
+      #mute:hover { background: rgba(8, 60, 76, 0.75); }
+      #mute:active { transform: scale(0.92); }
+      #mute.muted { color: #c8924a; }
+      /* Phase 4 COIN COUNTER (spec: Coin economy) — top-right, left of the mute
+         button: the FoF gold coin icon (slow Y-spin glint) + the run total. The
+         number ROLLS UP in main.js (never snaps); the glassy pill keeps it
+         legible over the bright sea. Pure UI — pointer-events off. */
+      #coinHud {
+        position: fixed;
+        top: 10px;
+        right: 64px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 14px 0 10px;
+        border-radius: 20px;
+        background: rgba(8, 60, 76, 0.55);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(234, 252, 255, 0.25);
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #coinHud img {
+        width: 24px;
+        height: 24px;
+        display: block;
+        animation: coinSpin 3s ease-in-out infinite;
+      }
+      @keyframes coinSpin {
+        0%, 100% { transform: rotateY(0deg); }
+        50%      { transform: rotateY(180deg); }
+      }
+      #coinCount {
+        color: #ffe98a;
+        font-size: 17px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 1px 3px #04303d, 0 0 4px #04303d;
+      }
+      #banner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 48px;
+        font-weight: 800;
+        text-shadow: 0 2px 8px #000;
+        display: none;
+        text-align: center;
+        white-space: pre-line;
+      }
+      /* Retry affordance: a small calm hint under the win/lose banner. Shown only
+         in won/lost states (toggled in main.js). A slow breath keeps it inviting
+         without competing with the banner. pointer-events stays off (the whole
+         window is the click target, wired in main.js). */
+      #retryHint {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, calc(-50% + 64px));
+        color: #eafcff;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-shadow: 0 1px 4px #04303d, 0 0 6px #04303d;
+        display: none;
+        text-align: center;
+        -webkit-user-select: none;
+        user-select: none;
+        animation: retryBreath 1.8s ease-in-out infinite;
+      }
+      @keyframes retryBreath {
+        0%, 100% { opacity: 0.55; }
+        50%      { opacity: 1; }
+      }
+      /* Phase 4 LEVEL-CLEAR SPIN (spec: Level-clear spin) — the RESULT BANNER:
+         a glassy pill below the wheel naming the reward. Entrance (easeOutBack
+         scale pop, bigger on jackpots) is driven per-frame from spin.js, so no
+         CSS transition here. The flash is the jackpot's brief white veil, its
+         opacity also driven from spin.js. Both pointer-events off (the whole
+         window is the tap target, as with the retry flow). */
+      #spinBanner {
+        position: fixed;
+        top: 74%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 14px 28px;
+        border-radius: 18px;
+        background: rgba(8, 60, 76, 0.78);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 226, 122, 0.45);
+        color: #ffe98a;
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1.3;
+        text-align: center;
+        text-shadow: 0 1px 4px #04303d;
+        white-space: pre-line;
+        display: none;
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #spinFlash {
+        position: fixed;
+        inset: 0;
+        background: #fff;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ===== Phase 5 (5.11) UI screens — FoF panel language (wheel-project
+         reference, docs/wheel-asset-audit.md): semi-transparent aqua glass,
+         warm gold border, rounded corners, easeOutBack entrances. ========== */
+
+      /* Level indicator: top-left warm-gold pill badge, white text. */
+      #levelHud {
+        position: fixed;
+        top: 10px;
+        left: 12px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #ffd86b, #f0a93a);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 800;
+        text-shadow: 0 1px 2px rgba(122, 76, 8, 0.65);
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      /* Shared overlay + card. */
+      .screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 8;
+        /* taps fall through to the canvas (tap-anywhere advance); only the
+           card buttons take pointer input */
+        pointer-events: none;
+      }
+      .card button { pointer-events: auto; }
+      .screen.in { display: flex; }
+      /* Player direction (final): every card anchors at the BOARD CENTER
+         (top 36% in the locked framing) — title, jammed and treasure screens
+         share the level-cleared popup's home, so all end states are coherent. */
+      .card {
+        position: absolute;
+        top: 36%;
+        left: 50%;
+        background: rgba(8, 60, 76, 0.78);
+        border: 3px solid rgba(255, 226, 122, 0.75);
+        border-radius: 18px;
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+        padding: 30px 48px;
+        text-align: center;
+        color: #eafcff;
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 0;
+        transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease-out;
+      }
+      .screen.in .card { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      .card h1 {
+        margin: 0 0 6px;
+        font-size: 44px;
+        font-weight: 800;
+        color: #ffe08a;
+        text-shadow: 0 2px 0 #b87f17, 0 4px 14px rgba(0, 0, 0, 0.4);
+        letter-spacing: 0.01em;
+      }
+      .card .sub { font-size: 17px; opacity: 0.9; margin: 4px 0 0; }
+      .card .tap {
+        margin-top: 22px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #ffe98a;
+        letter-spacing: 0.06em;
+        animation: tapPulse 1s ease-in-out infinite;
+      }
+      @keyframes tapPulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+      .card button {
+        margin-top: 20px;
+        padding: 12px 34px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffd86b, #f0a93a);
+        color: #2a1606;
+        font-size: 19px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        transition: transform 90ms ease;
+      }
+      .card button:hover { transform: scale(1.05); }
+      .card button:active { transform: scale(0.95); }
+
+      /* Title screen: dimming veil; the live sea keeps running behind it. */
+      #titleScreen { background: rgba(6, 48, 61, 0.45); transition: opacity 300ms ease-out; }
+      #titleScreen.out { opacity: 0; pointer-events: none; }
+
+      /* Next-level banner (player direction, final): appears ONLY once the
+         wheel has settled, AT THE BOARD CENTER, with a scale-up BOUNCE
+         (easeOutBack overshoot) — and a size up on box + type. */
+      #nextBanner {
+        position: fixed;
+        top: 36%;  /* the board's center in the locked framing (camera -2.25, viewH 16) */
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.4);
+        opacity: 0;
+        visibility: hidden;
+        transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                    opacity 180ms ease-out, visibility 0s 180ms;
+        background: rgba(8, 60, 76, 0.85);
+        border: 3px solid rgba(255, 226, 122, 0.8);
+        border-radius: 20px;
+        box-shadow: 0 12px 38px rgba(0, 0, 0, 0.5);
+        padding: 26px 58px;
+        text-align: center;
+        color: #eafcff;
+        z-index: 8;
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #nextBanner.in {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        visibility: visible;
+        transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                    opacity 180ms ease-out;
+      }
+      #nextBanner .big { font-size: 42px; font-weight: 800; color: #ffe08a; text-shadow: 0 3px 0 #b87f17, 0 5px 16px rgba(0,0,0,0.4); }
+      #nextBanner .sub { font-size: 20px; }
+      #nextBanner .coins { font-size: 25px; font-weight: 800; color: #ffe98a; margin-top: 6px; }
+      #nextBanner .tap {
+        margin-top: 14px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffe98a;
+        letter-spacing: 0.06em;
+        animation: tapPulse 1s ease-in-out infinite;
+      }
+
+      /* Win screen: golden radial vignette fading in over 1s under the card. */
+      #winVignette {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at center,
+          rgba(255, 216, 107, 0) 35%, rgba(240, 169, 58, 0.28) 75%, rgba(184, 127, 23, 0.5) 100%);
+        opacity: 0;
+        transition: opacity 1s ease-out;
+        pointer-events: none;
+        z-index: 7;
+      }
+      #winScreen.in ~ #winVignette, #winVignette.in { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="ui"></div>
+    <div id="hud"></div>
+    <button id="mute" type="button" aria-label="Mute (m)">&#128266;</button>
+    <div id="coinHud" aria-label="Coins">
+      <img src="assets/sprites/coin.png" alt="" />
+      <span id="coinCount">0</span>
+    </div>
+    <div id="banner"></div>
+    <div id="retryHint"></div>
+    <div id="spinFlash"></div>
+    <div id="spinBanner"></div>
+
+    <!-- Phase 5 (5.11) screens -->
+    <div id="levelHud"></div>
+    <div id="titleScreen" class="screen">
+      <div class="card">
+        <h1>Fish of Fortune</h1>
+        <p class="sub">a reef conveyor puzzle — clear every tile, mind the buckets</p>
+        <div class="tap">TAP TO PLAY</div>
+      </div>
+    </div>
+    <div id="nextBanner">
+      <div class="big" id="nextTitle"></div>
+      <div class="sub" id="nextName"></div>
+      <div class="coins" id="nextCoins"></div>
+      <div class="tap" id="nextTap">TAP TO CONTINUE</div>
+    </div>
+    <div id="winVignette"></div>
+    <div id="winScreen" class="screen">
+      <div class="card">
+        <h1>Treasure Found!</h1>
+        <p class="sub" id="winCoins"></p>
+        <button id="winRetryBtn" type="button">PLAY AGAIN</button>
+      </div>
+    </div>
+    <div id="loseScreen" class="screen">
+      <div class="card">
+        <h1>Jammed!</h1>
+        <p class="sub">The belt is blocked — try a different order.</p>
+        <p class="sub" id="loseName"></p>
+        <button id="loseRetryBtn" type="button">TRY AGAIN</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

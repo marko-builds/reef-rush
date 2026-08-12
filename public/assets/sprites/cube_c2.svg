@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- cube_c2 = C2 color key, rendered bright TEAL for contrast over the turquoise
+       sea (saturated cyan, never the muted sea blue). Silhouette: a scallop SHELL. -->
+  <defs>
+    <radialGradient id="c2g" cx="50%" cy="22%" r="90%">
+      <stop offset="0%" stop-color="#8df6f2"/>
+      <stop offset="50%" stop-color="#13c4c4"/>
+      <stop offset="100%" stop-color="#0a7a82"/>
+    </radialGradient>
+  </defs>
+  <g stroke="#064d54" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path fill="url(#c2g)" d="M50 20
+      C28 20 12 40 12 62
+      C12 70 18 76 26 74
+      C30 80 38 80 42 74
+      C46 80 54 80 58 74
+      C62 80 70 80 74 74
+      C82 76 88 70 88 62
+      C88 40 72 20 50 20 Z"/>
+    <path fill="none" stroke="#d6fbfb" stroke-width="3" d="M50 26 L34 70 M50 26 L50 72 M50 26 L66 70 M50 26 L22 64 M50 26 L78 64"/>
+    <circle cx="50" cy="26" r="6" fill="#e3ffff" stroke="#064d54" stroke-width="2.5"/>
+  </g>
+</svg>

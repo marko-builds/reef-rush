@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- pig_g = the GOLDEN PIG (Phase 4 jackpot shooter) — a radiant WHITE-GOLD
+       fish, deliberately PALER than pig_c4's deep treasure gold so the two
+       never blur on level 5; the flank STAR + sparkle glints are its identity
+       (the in-game glow border + sparkle FX do the rest). Same body layout as
+       the other pig sprites so belt-facing rotation reads identically. -->
+  <defs>
+    <radialGradient id="pgg" cx="42%" cy="34%" r="70%">
+      <stop offset="0%" stop-color="#fffdf0"/>
+      <stop offset="55%" stop-color="#ffe27a"/>
+      <stop offset="100%" stop-color="#e3ae2e"/>
+    </radialGradient>
+  </defs>
+  <g stroke="#a87b10" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- tail -->
+    <path fill="url(#pgg)" d="M80 50 l16 -14 0 28 z"/>
+    <!-- fins -->
+    <path fill="url(#pgg)" d="M44 26 q6 -12 16 -10 q-4 8 -10 12 z"/>
+    <path fill="url(#pgg)" d="M44 78 q6 12 16 10 q-4 -8 -10 -12 z"/>
+    <!-- body -->
+    <ellipse cx="44" cy="52" rx="34" ry="28" fill="url(#pgg)"/>
+    <!-- contrast stripe backing the ammo number readability -->
+    <path fill="#fffaf0" stroke="none" d="M30 30 q-14 22 0 44 q10 -22 0 -44 z" opacity="0.6"/>
+    <!-- the jackpot STAR on the flank -->
+    <path fill="#fff3c4" stroke="#c78f1a" stroke-width="3"
+          d="M56 36 l3.6 8.2 8.9 0.9 -6.7 5.9 2 8.6 -7.8 -4.6 -7.8 4.6 2 -8.6 -6.7 -5.9 8.9 -0.9 z"/>
+    <circle cx="26" cy="46" r="6" fill="#fff"/><circle cx="25" cy="47" r="3" fill="#3a2700" stroke="none"/>
+  </g>
+  <!-- sparkle glints -->
+  <g fill="#ffffff" opacity="0.9">
+    <path d="M72 20 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z"/>
+    <path d="M14 68 l1.5 3.8 3.8 1.5 -3.8 1.5 -1.5 3.8 -1.5 -3.8 -3.8 -1.5 3.8 -1.5 z"/>
+  </g>
+</svg>
