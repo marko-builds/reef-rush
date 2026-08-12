@@ -1,23 +1,16 @@
 {
-  "_comment": "Runtime manifest the styled reef build fetches at boot. SVG sprites, rasterized to CanvasTexture in-browser. Missing path -> labelled placeholder, never a crash. The game uses FOUR palette slots across its 5-level sequence (spec re-lock #3, 2026-06-10): C1 coral, C2 teal, C3 reef green (enters at level 4), C4 treasure gold (enters at level 5). cube_cN and pig_cN share an UNMISTAKABLE hue per slot (a pig clears cubes of its OWN color). colorKey is the build-agnostic slot; firing matches by key STRING so gameplay is untouched. 'treasure' is the level-5 centerpiece (pearl-in-shell) revealed by clearing the rings.",
-  "colorMap": { "c1": "C1", "c2": "C2", "c3": "C3", "c4": "C4" },
-  "gameplayColors": { "C1": "#ff6a3d", "C2": "#13c4c4", "C3": "#c05ed9", "C4": "#ffc91f" },
+  "_comment": "Runtime manifest the Reef Rush playable fetches at boot (the single-file build inlines it instead). PNG sprites only. Missing path -> labelled placeholder, never a crash. The ad level uses TWO palette slots: C1 coral, C4 treasure gold. cube_cN and pig_cN share an unmistakable hue per slot (a bait clears cubes of its OWN color). colorKey is the build-agnostic slot; firing matches by key STRING so gameplay is untouched. 'treasure' is the centerpiece revealed by clearing the ring.",
+  "colorMap": { "c1": "C1", "c4": "C4" },
+  "gameplayColors": { "C1": "#ff6a3d", "C4": "#ffc91f" },
   "sprites": [
     { "id": "cube_c1", "path": "sprites/cube_c1.png", "role": "cube", "colorKey": "C1", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "cube_c2", "path": "sprites/cube_c2.png", "role": "cube", "colorKey": "C2", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "cube_c3", "path": "sprites/cube_c3.png", "role": "cube", "colorKey": "C3", "layer": "L2", "scale": 1.0, "anchor": "center" },
     { "id": "cube_c4", "path": "sprites/cube_c4.png", "role": "cube", "colorKey": "C4", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "cube_w",  "path": "sprites/cube_w.png",  "role": "cube", "colorKey": "W",  "layer": "L2", "scale": 1.0, "anchor": "center" },
     { "id": "cube_m",  "path": "sprites/cube_m.png",  "role": "cube", "colorKey": "M",  "layer": "L2", "scale": 1.0, "anchor": "center" },
 
     { "id": "pig_c1", "path": "sprites/pig_c1.png", "role": "pig", "colorKey": "C1", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "pig_c2", "path": "sprites/pig_c2.png", "role": "pig", "colorKey": "C2", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "pig_c3", "path": "sprites/pig_c3.png", "role": "pig", "colorKey": "C3", "layer": "L2", "scale": 1.0, "anchor": "center" },
     { "id": "pig_c4", "path": "sprites/pig_c4.png", "role": "pig", "colorKey": "C4", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "pig_g",  "path": "sprites/pig_g.png",  "role": "pig", "colorKey": "G",  "layer": "L2", "scale": 1.0, "anchor": "center" },
 
     { "id": "treasure", "path": "sprites/treasure.png", "role": "treasure", "layer": "L2", "scale": 1.0, "anchor": "center" },
-    { "id": "seaweed",  "path": "sprites/seaweed.png",  "role": "overlay",  "layer": "L2", "scale": 1.0, "anchor": "center" },
 
     { "id": "coin",         "path": "sprites/coin.png",         "role": "coin",     "layer": "L4", "scale": 1.0, "anchor": "center" },
     { "id": "shot",         "path": "sprites/shot.png",         "role": "shot",     "layer": "L4", "scale": 1.0, "anchor": "center" },

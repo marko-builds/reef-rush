@@ -605,47 +605,26 @@ function updateHint() {
   if (!hintActive || !pigs) return;
   const heads = pigs.laneHeads();
   if (!heads.length) return;
-  // Ring the FIRST lane head (leftmost tappable fish); the text sits below.
+  // Ring the FIRST lane head (leftmost tappable fish); the text line is
+  // screen-centered horizontally (CSS) and rides just above the ring.
   const p = heads[0].pig.mesh.position;
   const s = worldToScreen(p.x, p.y);
   hintEl.style.left = s.x + 'px';
   hintEl.style.top = s.y + 'px';
+  const line = hintEl.querySelector('.line');
+  if (line) line.style.top = (s.y - 82) + 'px';
 }
 
 // ---------------------------------------------------------------------------
-// MUTE: keyboard 'm' + a small on-screen button (the entire audio UI). The game
-// is fully playable muted; default mix is gentle. Resuming on these gestures too
-// so a player who mutes/unmutes before tapping still gets a live context.
+// RETRY keys: Enter or R restart after a loss, but ONLY at game over
+// (tryRetry gates on 'lost'), so these keys are inert during play.
+// (The mute button is gone — playables run muted; the audio bus is a no-op.)
 // ---------------------------------------------------------------------------
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'm' || e.key === 'M') {
-    audio.resume();
-    const muted = audio.toggleMute();
-    syncMuteButton(muted);
-  }
-  // v3 RETRY keys: Enter or R restart the same level, but ONLY at game over
-  // (tryRetry gates on won/lost), so these keys are inert during play.
   if (e.key === 'Enter' || e.key === 'r' || e.key === 'R') {
     tryRetry();
   }
 });
-
-const muteBtn = document.getElementById('mute');
-function syncMuteButton(muted) {
-  if (!muteBtn) return;
-  muteBtn.textContent = muted ? '\u{1F507}' : '\u{1F50A}'; // muted vs sound-on speaker
-  muteBtn.setAttribute('aria-label', muted ? 'Unmute (m)' : 'Mute (m)');
-  muteBtn.classList.toggle('muted', muted);
-}
-if (muteBtn) {
-  muteBtn.addEventListener('click', () => {
-    audio.resume();
-    audio.startAmbient();
-    const muted = audio.toggleMute();
-    syncMuteButton(muted);
-  });
-  syncMuteButton(audio.muted);
-}
 
 // ---------------------------------------------------------------------------
 // DOM ammo labels: one per pig, repositioned each frame from world->screen.
