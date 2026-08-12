@@ -1,4 +1,4 @@
-// level.js — DATA-DRIVEN level definitions for the v3 styled (Fish of Fortune) build.
+// level.js — DATA-DRIVEN level definitions for the v3 styled reef build.
 //
 // Nothing in here is logic; it is the authored 5-LEVEL SEQUENCE (spec re-lock #3).
 // Every level is a 9x9 cell pattern; each cell holds a big block unless authored
@@ -6,7 +6,7 @@
 //
 // Colors: 4 build-agnostic palette SLOTS (C1..C4); firing matches by key string,
 // never hex, so this reskin is look-only. Levels 1-3 use C1+C2, level 4
-// introduces C3, level 5 introduces C4. FoF hues (reskin brief): C1 coral-orange,
+// introduces C3, level 5 introduces C4. Reef hues (reskin brief): C1 coral-orange,
 // C2 bright teal/cyan (saturated — never the muted sea blue), C3 reef green
 // (starfish/turtle sprites), C4 treasure gold. All four pop over the aqua sea
 // and the board vignette guarantees contrast.

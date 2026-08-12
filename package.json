@@ -1,9 +1,9 @@
 {
-  "name": "pixelflow-styled-fof-v3",
+  "name": "reef-rush",
   "private": true,
-  "version": "3.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Pixel Flow recreation — v3 styled Fish of Fortune build (juice + reskin; gameplay + core v2 timings identical).",
+  "description": "Reef Rush — a ~25 second single-level playable-ad conversion of an original Three.js reef color-shooter.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

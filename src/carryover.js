@@ -12,7 +12,7 @@
 
 import { GRID_COLS, GRID_ROWS } from './level.js';
 
-export const CARRY_KEY = 'fof-spin-carry';
+export const CARRY_KEY = 'rr-spin-carry';
 
 // VALID injected-mine cells (spec: Level-clear spin, segment D): an INNER cell
 // (col,row in 1..GRID-2 — start-buried by construction on these fully-ringed

@@ -1,6 +1,6 @@
 // main.js — scene composition, ortho camera, render loop, input, and UI overlay.
 //
-// v3 STYLED (Fish of Fortune reskin): the v2 primitive playfield is reskinned to a
+// v3 STYLED (reef reskin): the v2 primitive playfield is reskinned to a
 // layered-2D reef. Sprites (original SVGs) drive cubes/pigs/belt/slots; a Seascape
 // builds the sea gradient + parallax life + a vignette behind the board. Boot is
 // async (load the manifest, then build). RESKIN IS LOOK ONLY — every gameplay value,
@@ -145,7 +145,7 @@ async function boot() {
   // the win/lose transitions. Driven off pigs.vfx[] + pigs.state (render-safe).
   vfx = new VfxLayer(scene, assets, board, conveyor, pigs, slotRack,
     { finaleRain: levelIndex === LEVELS.length }); // L5 treasure: 32-coin rain
-  // Phase 4 LEVEL-CLEAR SPIN (spec: Level-clear spin): the fortune-wheel
+  // Phase 4 LEVEL-CLEAR SPIN (spec: Level-clear spin): the bonus-wheel
   // overlay, centered on the screen (the camera's rest position). Started on
   // the won edge of levels 1-4 only; results apply via applySpinResult.
   // Phase 5 player direction: the wheel sits on the BOARD's center (blocks +
@@ -158,7 +158,7 @@ async function boot() {
   levelHudEl.textContent = `Level ${levelIndex}/${LEVELS.length} \u2014 ${level.name}`;
   // Title screen: only on a FRESH session's level 1 (the sea runs live behind
   // it; one tap anywhere starts the game). Retries / later levels skip it.
-  if (levelIndex === 1 && !sessionStorage.getItem('fof-title-shown')) {
+  if (levelIndex === 1 && !sessionStorage.getItem('rr-title-shown')) {
     titleActive = true;
     titleScreenEl.classList.add('in');
   }
@@ -168,9 +168,9 @@ async function boot() {
 
 // TREASURE centerpiece (level 5 only): the golden pearl-in-shell sprite sitting
 // in the authored center pocket, BEHIND the reef tiles — it peeks out as the
-// inner rings peel away (the buried fortune) and CELEBRATES when the board
-// clears: an easeOutBack pop to 2.1x with a slow bobbing spin (the FoF
-// "fortune found" beat). Idle: a gentle 0.4 Hz shimmer-breath.
+// inner rings peel away (the buried treasure) and CELEBRATES when the board
+// clears: an easeOutBack pop to 2.1x with a slow bobbing spin (the
+// "treasure found" beat). Idle: a gentle 0.4 Hz shimmer-breath.
 function buildTreasure() {
   if (!level.treasure) return null;
   const rec = assets.get('treasure');
@@ -592,7 +592,7 @@ function tryRetry() {
 // timeline. applySpinResult (fired ONCE at spin settle): coin segments add to
 // the run total with the normal roll-up and RE-BANK it (updateCoins banked the
 // pre-spin total on the won edge; the next boot must start post-spin); carry
-// segments write the one-shot fof-spin-carry flags the next boot consumes.
+// segments write the one-shot spin-carry flags the next boot consumes.
 function updateSpin(dt) {
   if (!spin) return;
   if (pigs.state === 'won' && levelIndex < LEVELS.length) spin.start();
@@ -618,7 +618,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   // session — retries and later levels boot straight into play).
   if (titleActive) {
     titleActive = false;
-    sessionStorage.setItem('fof-title-shown', '1');
+    sessionStorage.setItem('rr-title-shown', '1');
     titleScreenEl.classList.add('out');
     setTimeout(() => titleScreenEl.classList.remove('in'), 320);
     return;
@@ -734,7 +734,7 @@ function updateHud() {
 // Phase 5 (5.11): the end-state SCREENS replace the old plain-text banner.
 // - won, levels 1-4: a compact NEXT-LEVEL banner slides in from the top
 //   (easeOutBack 320ms, CSS-driven) with the level name + this level's coin
-//   delta; it steps aside while the fortune wheel owns the center and returns
+//   delta; it steps aside while the bonus wheel owns the center and returns
 //   with the TAP TO CONTINUE prompt at the wheel's result banner.
 // - won, level 5: the TREASURE screen — a golden radial vignette fades in over
 //   1s while the existing treasure pop + 32-coin rain play; card shows the run
@@ -798,7 +798,7 @@ function updateBanner() {
 // "play again" wrap resets the bank (a fresh run).
 // ---------------------------------------------------------------------------
 const coinCountEl = document.getElementById('coinCount');
-const COIN_KEY = 'fof-run-coins';
+const COIN_KEY = 'rr-run-coins';
 const COIN_ROLL_DUR = 0.6; // 600ms roll-up, easeOutCubic
 const coinBank = (() => {
   const n = parseInt(sessionStorage.getItem(COIN_KEY) ?? '0', 10);
@@ -882,7 +882,7 @@ function updateAudio() {
     } else if (pigs.state === 'lost') audio.onLose();
     audioState = pigs.state;
   }
-  // Phase 5: fortune-wheel beats, edge-triggered off the spin's phase.
+  // Phase 5: bonus-wheel beats, edge-triggered off the spin's phase.
   if (spin) {
     const ph = spin.active ? spin.phase : 'idle';
     if (ph !== spinPhaseSeen) {
@@ -914,7 +914,7 @@ function tick() {
   updateLabels();
   updateHud();
   updateBanner(dt);
-  updateSpin(dt);  // Phase 4: the level-clear fortune wheel (won edge, L1-4)
+  updateSpin(dt);  // Phase 4: the level-clear bonus wheel (won edge, L1-4)
   // Phase 4 mine-explosion SCREEN SHAKE: the VfxLayer owns the decaying jitter;
   // we just offset the camera by it each frame (zero when no shake is live).
   camera.position.x = vfx.shakeOffset.x;

@@ -1,4 +1,4 @@
-// vfx.js — v3 JUICE layer (Fish of Fortune). ADDITIVE cosmetic feedback only.
+// vfx.js — v3 JUICE layer (reef reskin). ADDITIVE cosmetic feedback only.
 //
 // This module owns every v3 dynamic-feedback effect: the fired SHOT bubble, the
 // cube-pop SPLASH burst + neighbor NUDGE, the fire MUZZLE puff, the slot-rack

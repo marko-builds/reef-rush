@@ -1,4 +1,4 @@
-// audio.js — v3 STYLED (Fish of Fortune) audio bus. ADDITIVE feedback only.
+// audio.js — v3 STYLED reef audio bus. ADDITIVE feedback only.
 //
 // Calm, cheerful casual-mobile underwater mix. EVERY sound is SYNTHESIZED with the
 // WebAudio API (oscillators / filtered noise / gain envelopes) — there are NO
@@ -39,7 +39,7 @@ const FILE_SFX = {            // id -> playback gain (relative, under master)
   leaf_rustle: 0.55,          // seaweed dewrap peel
   golden_launch: 0.7,         // golden pig enters the belt
   golden_pierce: 0.5,         // golden pierce pair (2nd hit of one shot)
-  wheel_spin: 0.8,            // fortune wheel launches forward
+  wheel_spin: 0.8,            // bonus wheel launches forward
   spin_settle: 0.7,           // wheel parks on its result
   level_clear: 0.85,          // level 1-4 cleared (before the wheel)
   treasure_reveal: 0.9,       // level-5 pearl pops free (the finale)
@@ -358,7 +358,7 @@ export class AudioBus {
     this._playFile('golden_pierce', () => this.onPop('C4'));
   }
 
-  // SPIN START / SETTLE: the level-clear fortune wheel beats.
+  // SPIN START / SETTLE: the level-clear bonus wheel beats.
   onSpinStart()  { this._playFile('wheel_spin'); }
   onSpinSettle() { this._playFile('spin_settle'); }
 
