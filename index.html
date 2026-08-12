@@ -281,6 +281,9 @@
         <button id="loseCtaBtn" type="button" class="cta-secondary">SEE MORE</button>
       </div>
     </div>
+    <!-- MRAID: the ad network's webview serves this file; on a plain web host
+         it 404s harmlessly and the game starts immediately (mraid undefined). -->
+    <script src="mraid.js"></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -873,6 +873,43 @@ for (const id of ['winCtaBtn', 'loseCtaBtn']) {
   });
 }
 
-boot().then(() => {
-  window.__game = { board, conveyor, pigs, CONFIG, level };
-});
+// ---------------------------------------------------------------------------
+// MRAID BOOT GATE (the playable-ad contract):
+// - no mraid at all (GitHub Pages / plain browser) -> start immediately.
+// - mraid still 'loading' -> subscribe to 'ready' (the ONLY calls allowed
+//   before ready are getState/addEventListener/removeEventListener), THEN
+//   check isViewable() / wait for 'viewableChange' before starting the game
+//   clock. Nothing renders or ticks until the ad is actually on screen.
+// ---------------------------------------------------------------------------
+let bootStarted = false;
+function startGame() {
+  if (bootStarted) return;
+  bootStarted = true;
+  boot().then(() => {
+    window.__game = { board, conveyor, pigs, CONFIG, level };
+  });
+}
+
+if (typeof mraid === 'undefined') {
+  startGame();
+} else {
+  const startWhenViewable = () => {
+    // post-ready: isViewable is now a legal call
+    if (mraid.isViewable()) {
+      startGame();
+    } else {
+      const onView = () => {
+        if (mraid.isViewable()) {
+          mraid.removeEventListener('viewableChange', onView);
+          startGame();
+        }
+      };
+      mraid.addEventListener('viewableChange', onView);
+    }
+  };
+  if (mraid.getState() === 'loading') {
+    mraid.addEventListener('ready', startWhenViewable);
+  } else {
+    startWhenViewable();
+  }
+}
