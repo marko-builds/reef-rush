@@ -618,7 +618,6 @@ function updateHint() {
 // ---------------------------------------------------------------------------
 // RETRY keys: Enter or R restart after a loss, but ONLY at game over
 // (tryRetry gates on 'lost'), so these keys are inert during play.
-// (The mute button is gone — playables run muted; the audio bus is a no-op.)
 // ---------------------------------------------------------------------------
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === 'r' || e.key === 'R') {
@@ -849,6 +848,21 @@ for (const id of ['winCtaBtn', 'loseCtaBtn']) {
   if (btn) btn.addEventListener('click', (e) => {
     e.stopPropagation();
     openCta();
+  });
+}
+
+// MUTE TOGGLE. The click may be the session's FIRST user gesture (before any
+// canvas tap), in which case no AudioContext exists yet — so the handler
+// resumes the bus itself: the context is then live, and an unmute later plays
+// the already-requested ambient bed without another gesture.
+{
+  const btn = document.getElementById('muteBtn');
+  if (btn) btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    audio.resume();
+    audio.startAmbient();
+    const muted = audio.toggleMute();
+    btn.innerHTML = muted ? '&#x1F507;' : '&#x1F50A;';
   });
 }
 

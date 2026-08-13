@@ -45,7 +45,7 @@
       /* COIN COUNTER — top-right: the gold coin icon (slow Y-spin glint) + the
          run total. The number ROLLS UP in main.js (never snaps); the glassy
          pill keeps it legible over the bright sea. Pure UI — pointer-events
-         off. (No mute button: playables run muted, the audio bus is a no-op.) */
+         off. */
       #coinHud {
         position: fixed;
         top: 10px;
@@ -79,6 +79,33 @@
         font-variant-numeric: tabular-nums;
         text-shadow: 0 1px 3px #04303d, 0 0 4px #04303d;
       }
+      /* MUTE TOGGLE — top-left (the corners are free; #hud text starts at 58px).
+         Sits directly in <body>, NOT inside #ui (which is pointer-events:none),
+         and carries its own pointer-events:auto so it is tappable either way.
+         Sound is gesture-gated: the click itself resumes the AudioContext in
+         main.js, so muting before ever touching the canvas still works. */
+      #muteBtn {
+        position: fixed;
+        top: 10px;
+        left: 12px;
+        z-index: 9;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(8, 60, 76, 0.55);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(234, 252, 255, 0.25);
+        color: #eafcff;
+        font-size: 19px;
+        line-height: 40px;
+        text-align: center;
+        padding: 0;
+        cursor: pointer;
+        pointer-events: auto;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
       /* ===== UI screens — reef panel language:
          semi-transparent aqua glass,
          warm gold border, rounded corners, easeOutBack entrances. ========== */
@@ -231,6 +258,7 @@
       <img src="assets/sprites/coin.png" alt="" />
       <span id="coinCount">0</span>
     </div>
+    <button id="muteBtn" type="button" aria-label="Toggle sound">&#x1F50A;</button>
     <div id="titleScreen" class="screen">
       <div class="card">
         <h1>Reef Rush</h1>
