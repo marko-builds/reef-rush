@@ -94,3 +94,83 @@ anything shipped. No NDA on the source work.
 - Touch the source assignment dirs.
 - Add frameworks, TypeScript, or restructure beyond what the phases need.
 - Mark any phase done without the Phase 5 evidence for it.
+
+---
+
+# Round 2 — sound + depth + juice (decided with Marko 2026-08-13)
+
+Round 1 shipped and verified (6 commits, adpreflight pass, 3.44MB single-file). Marko playtested
+and picked the "recommended package": restore sound, add seaweed wraps, one scripted golden fish,
+a juice pass on the two peak moments, retune to keep a 20-30s first-try win. ONE build, sound
+gesture-gated in both the hosted and packaged artifacts. Same Do-NOTs as Round 1; copying files
+OUT of the read-only source dirs is allowed.
+
+## Phase R2-A — restore the synthesized audio bus
+
+**Red-teamed 2026-08-13; the fixes below are load-bearing.**
+
+- Replace the no-op `src/audio.js` with the source bus
+  (`../pixelflow-claude-code-env/reef/styled_fof_version/src/audio.js`, 384 lines), then REWIRE
+  (not delete) the mp3 file layer — the packaged build must make zero network requests. The trap:
+  `onMineBoom/onDewrap/onGoldenLaunch/onGoldenPierce/onTreasure` exist ONLY as fallback closures
+  inside `_playFile(id, fallback)` (source audio.js:340-367), and the ambient bed starts ONLY via
+  the file-load fallback chain (`startAmbient` → `_wantAmbient` → `_afterLoad` → `_startAmbient`).
+  So: promote each fallback closure to the method body, rewire `startAmbient()` to call
+  `_startAmbient()` directly, THEN remove the fetch/decode layer. Keep every synthesized voice:
+  ambient bed, per-color pops, dewrap, mine boom, park/vacate, treasure, lose, launch plips.
+- `main.js` already calls every bus method and resumes on first canvas `pointerdown` (main.js:565),
+  so the gesture gate exists: AudioContext is created/resumed ONLY inside `resume()` (never at
+  module load — the source already does this right, keep it that way).
+- Re-add a small mute toggle button (the existing `toggleMute()`), top corner — the corners are
+  free (`#hud` sits at top:58px). Gotchas: `#ui` is `pointer-events:none` (index.html:22), so the
+  button needs its own `pointer-events:auto`; and clicking mute BEFORE touching the canvas won't
+  have created the AudioContext, so the mute handler must also call `audio.resume()`. Icon or
+  plain text label, no dashes/arrows.
+- De-brand any comments the copied file carries (Round 1 Phase 1 rule applies).
+
+## Phase R2-B — seaweed wraps on the two coral accents
+
+- Level: add `wraps` for the two 'A' cells (pattern row index 5 → world row 3, cols 1 and 7 —
+  coords verified against `expandPattern`).
+- Asset diet: copy `seaweed.png` from the source sprites into `public/assets/sprites/` (256px max
+  downscale) + add the `manifest.json` entry. That is ALL — `build-single.mjs` derives its inline
+  map from `manifest.sprites` automatically. board.js already renders `wrapped`; pigs.update
+  already dewraps; the winnability harness already counts wrapped as 2 hits.
+
+## Phase R2-C — one scripted golden fish
+
+- Re-add `pig_g.png` (256px) the same way (sprite file + manifest entry).
+- Ship the existing `{ goldenHead: true }` boot option (pigs.js:119-125): one guaranteed golden
+  lane head from t=0, deterministic, zero new code paths. Do NOT build a mid-run wall-clock
+  injection — the solver wins in 5.7s on 3 of 5 seeds, so an 8-12s timer races the win and can
+  fire never. (There is no `_mint`; the golden branch lives in `_spawnQueuePig`, pigs.js:193-201.)
+- `goldenChance` stays 0 (no random goldens on top of the scripted one).
+- The winnability harness constructs PigManager with no opts, so it does NOT validate the golden —
+  the golden is a hand-playtest item, say so in the report.
+
+## Phase R2-D — juice pass (two peak moments only)
+
+- Mine blast: screen shake ALREADY EXISTS and already fires (`vfx.js:632` sets `this.shake`,
+  decay at :644-653, applied in main.js:829-830). Do not add a second shake system — tune
+  `SHAKE_AMP` up and enlarge the mine particle burst, nothing else. (Shake offsets
+  `camera.position`, not the frustum, so the portrait clamp is safe.)
+- Treasure reveal: slow the reveal beat, add glow/scale pulse + a fuller coin fountain. The end
+  card currently pops the instant `state==='won'` (main.js:718-719) and ALREADY overlaps the
+  reveal — gate `winScreenEl.classList.add('in')` behind the reveal finishing (winAge >= the new
+  reveal duration, or a timeout matched to it), or slowing the reveal makes the overlap worse.
+- Nothing else gets juice this round. No user-visible dashes/arrows in any new string.
+
+## Phase R2-E — retune + full re-verification (all must show output)
+
+1. Wraps add ~2 hits: retune pattern/CONFIG only as needed. The harness proves WINNABILITY
+   (solver floor), not the 20-30s human first-try — that 20-30s claim is Marko's hand-playtest
+   item, never claim it from harness numbers.
+2. `verify-winnability.mjs` green — 5/5 seeds winnable with wraps in.
+3. `npx vite build` exit 0; `node scripts/build-single.mjs`; report byte sizes. Single file must
+   stay under 5MB (was 3,608,788 bytes; 2 sprites + code adds well under 200KB — headroom 1.63MB).
+4. adpreflight against the fresh single-file: unity + google both pass, exit 0, verdict verbatim.
+5. Zero-network check the gates DON'T cover (adpreflight scans HTML attrs, not JS fetch calls):
+   `grep -nE "fetch\(|\.mp3|AUDIO_BASE" dist-single/index.html` → zero hits required.
+6. `grep -rIioE "fof|fortune|pixel ?flow" dist/ dist-single/` → zero hits (the copied audio.js
+   comments are the likely leak).
+7. One commit per phase, in this repo, from this dir.
