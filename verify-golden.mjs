@@ -195,26 +195,28 @@ console.log('\n=== (8) lockup semantics ===');
   pigs.conveyorPigs = []; pigs.slots.fill(null);
 }
 
-console.log('\n=== (9) reserve generation: ~3% golden, color G, fixed ammo 5 ===');
+console.log('\n=== (9) reserve generation: goldens are SCRIPTED, never random (ad build) ===');
 {
-  // fresh manager on a full board so the color weighting is normal
-  const b2 = new Board(scene, null, LEVELS[2]);
+  // The ad's one golden is the goldenHead boot option; goldenChance stays 0 so
+  // the random reserve can never mint a second on top of the scripted moment.
+  check('goldenChance is 0 (the golden moment is scripted, not rolled)', CONFIG.goldenChance === 0);
+  const b2 = new Board(scene, null, LEVELS[0]);
   const c2 = new Conveyor(b2);
-  const p2 = new PigManager(scene, b2, c2, null, LEVELS[2], makeRng(42));
+  const p2 = new PigManager(scene, b2, c2, null, LEVELS[0], makeRng(42));
   const N = 5000;
-  let golden = 0, badAmmo = 0, badFlag = 0;
-  for (let i = 0; i < N; i++) {
-    const pig = p2._spawnQueuePig();
-    if (pig.colorKey === 'G') {
-      golden++;
-      if (pig.ammo !== CONFIG.goldenAmmo) badAmmo++;
-      if (pig.golden !== true) badFlag++;
-    }
-  }
-  const rate = golden / N;
-  console.log(`  ${golden}/${N} golden (${(rate * 100).toFixed(2)}%; configured ${CONFIG.goldenChance * 100}%)`);
-  check('rate within 3 sigma of 3% (2.28%..3.72% for N=5000)', rate > 0.0228 && rate < 0.0372);
-  check(`every golden pig: ammo ${CONFIG.goldenAmmo} + golden flag`, badAmmo === 0 && badFlag === 0);
+  let golden = 0;
+  for (let i = 0; i < N; i++) if (p2._spawnQueuePig().colorKey === 'G') golden++;
+  check(`${N} reserve draws mint ZERO random goldens`, golden === 0);
+  // forceGolden (the scripted path) still mints a real one, without an rng draw.
+  const forced = p2._spawnQueuePig(true);
+  check(`forceGolden mints color G, ammo ${CONFIG.goldenAmmo}, golden flag`,
+    forced.colorKey === 'G' && forced.ammo === CONFIG.goldenAmmo && forced.golden === true);
+  // And the goldenHead boot option seats exactly ONE golden, at a lane head.
+  const b3 = new Board(scene, null, LEVELS[0]);
+  const p3 = new PigManager(scene, b3, new Conveyor(b3), null, LEVELS[0], makeRng(7), { goldenHead: true });
+  const goldHeads = p3.laneHeads().filter((h) => h.pig.colorKey === 'G').length;
+  const goldTotal = p3.lanes.flat().filter((p) => p.colorKey === 'G').length;
+  check('goldenHead boot: exactly ONE golden in the lanes, seated at a head', goldHeads === 1 && goldTotal === 1);
 }
 
 console.log('\n=== (10) lane sync NEVER culls golden pigs ===');
