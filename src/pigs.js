@@ -129,6 +129,15 @@ export class PigManager {
 
     this.state = 'playing'; // 'playing' | 'won' | 'lost'
 
+    // Off-screen floor (world y) for the lane reserve. Rows >= VISIBLE_ROWS
+    // must stay hidden on EVERY aspect: the portrait camera zooms OUT (main.js
+    // effectiveHalfH) and a fixed stack depth framed for desktop puts the
+    // reserve — whose pigs the lane sync swaps mid-game — in full view on a
+    // tall phone. main.js keeps this at the camera's real bottom edge via
+    // setReserveFloor(); null (headless harnesses never set it) = the fixed
+    // stack layout, unchanged.
+    this.reserveFloor = null;
+
     // --- v3 VFX EVENT QUEUE (cosmetic only, render-side drains it) -----------
     // update() pushes lightweight DATA records here when a cosmetic event occurs
     // (a shot fired, a cube popped, a pig parked/vacated). main.js's VfxLayer
@@ -304,12 +313,33 @@ export class PigManager {
     this.lanes.forEach((lane, li) => {
       const x = b.minX + li * laneGapX;
       lane.forEach((pig, ri) => {
-        pig.laneTarget = { x, y: headY - ri * rowGapY }; // ri 0 = head (top)
+        let y = headY - ri * rowGapY; // ri 0 = head (top)
+        // Park the reserve at or below the camera floor so a zoomed-out
+        // portrait frame never reveals it (visible rows 0..2 are untouched).
+        if (this.reserveFloor !== null && ri >= VISIBLE_ROWS) {
+          y = Math.min(y, this.reserveFloor - (ri - VISIBLE_ROWS) * rowGapY);
+        }
+        pig.laneTarget = { x, y };
         pig.mesh.rotation.z = 0; // queued pigs face up (toward the board)
         pig.mesh.visible = true;
         if (snap) pig.mesh.position.set(pig.laneTarget.x, pig.laneTarget.y, 0.1);
       });
     });
+  }
+
+  // Called by main.js on boot + every resize with the camera's bottom frustum
+  // edge minus a margin. Purely positional: re-lays the lane targets and SNAPS
+  // the reserve rows there — both old and new spots are off-screen, and the
+  // boot call must not slide them down through view. Visible rows are unmoved.
+  setReserveFloor(y) {
+    this.reserveFloor = y;
+    this._layoutLanes();
+    for (const lane of this.lanes) {
+      for (let ri = VISIBLE_ROWS; ri < lane.length; ri++) {
+        const p = lane[ri];
+        p.mesh.position.set(p.laneTarget.x, p.laneTarget.y, 0.1);
+      }
+    }
   }
 
   // World position of bucket/slot i — a centered row just below the board/belt (also
