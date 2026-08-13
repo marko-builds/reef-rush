@@ -1,27 +1,33 @@
-// assets.js — v3 styled sprite pipeline (SVG -> CanvasTexture, manifest-driven).
+// assets.js — v3 styled sprite pipeline (PNG textures, manifest-driven).
 //
 // Contract (asset-pipeline skill): a manifest is the single source of truth; every
 // sprite either loads from its file or falls back to a clearly-colored PLACEHOLDER,
 // so the scene NEVER crashes on missing art. Real art drops in with no code change.
 //
-// SVG is rasterized in-browser: fetch text -> data URL -> <img> -> draw to a
-// 2D canvas -> THREE.CanvasTexture. Flat sprite materials (layered-2D, not lit 3D).
+// ZERO-FETCH (Round 2, the playable-ad contract): the manifest is BUNDLED at
+// build time (JSON import below) and every sprite is a PNG loaded through
+// THREE.TextureLoader (an <img> element, not fetch) — the module contains no
+// runtime fetch() at all, so the packaged single-file build provably makes no
+// network request. The reference build's SVG-rasterize path (a fetch of the SVG
+// text) was dead code here — every shipped sprite is PNG — and is removed.
 //
 // This module is LOOK ONLY. It builds textures/materials; it never touches gameplay
 // state, timings, the conveyor path, the firing rule, or pig/slot positions.
 
 import * as THREE from 'three';
 import { COLORS } from './level.js';
+// The manifest ships INSIDE the bundle (both builds — one source of truth, no
+// runtime fetch). Vite inlines the JSON at build time.
+import manifestJson from '../public/assets/manifest.json';
 
-// Where the runtime manifest + sprites live (served by Vite from /public).
+// Where the runtime sprites live (served by Vite from /public).
 const ASSET_BASE = 'assets/';
-const RASTER_PX = 256; // raster size for cube/pig sprites; crisp at gameplay scale
 
 // SINGLE-FILE PACKAGING (the playable-ad zero-network contract): the packager
-// injects window.__RR_ASSETS = { manifest, files: { path -> data URI } } ahead
-// of the bundle. When it exists, the manifest is read inline and every sprite
-// loads from its data URI — no fetch, no network. The multi-file hosted build
-// has no such global and keeps the normal runtime fetch path.
+// injects window.__RR_ASSETS = { files: { path -> data URI } } ahead of the
+// bundle. When it exists, every sprite loads from its data URI — zero requests.
+// The multi-file hosted build has no such global and loads its own PNGs by URL
+// (the manifest itself is bundled either way, see the import above).
 const INLINE = (typeof window !== 'undefined' && window.__RR_ASSETS) || null;
 
 function assetUrl(path) {
@@ -34,21 +40,12 @@ const PLACEHOLDER_HEX = {
   C1: 0xff6a3d, C2: 0x13c4c4,
 };
 
-// --- format dispatch: pick the right loader by file extension ----------------
-// SVG must be fetched-as-text and rasterized to a fixed canvas; raster formats
-// (PNG/JPG/WEBP/GIF) load directly at full resolution. This is what lets authored
-// PNG art drop in over the SVG placeholders with no other code change.
+// --- raster (PNG/JPG/...): load the file directly as a full-res texture ------
+// (a data URI from the inlined single-file map loads through the same path;
+// TextureLoader decodes via an <img> element — no fetch involved)
 const _texLoader = new THREE.TextureLoader();
 
-async function pathToTexture(path, px = RASTER_PX) {
-  const ext = (path.split('.').pop() || '').toLowerCase();
-  if (ext === 'svg') return svgToTexture(path, px);
-  return rasterToTexture(path);
-}
-
-// --- raster (PNG/JPG/...): load the file directly as a full-res texture ------
-// (a data URI from the inlined single-file map loads through the same path)
-async function rasterToTexture(path) {
+async function pathToTexture(path) {
   const url = assetUrl(path);
   let tex;
   try {
@@ -62,39 +59,6 @@ async function rasterToTexture(path) {
   tex.anisotropy = 4;
   tex.needsUpdate = true;
   return tex;
-}
-
-// --- low-level: rasterize one SVG file to a CanvasTexture --------------------
-async function svgToTexture(path, px = RASTER_PX) {
-  const res = await fetch(ASSET_BASE + path);
-  if (!res.ok) throw new Error(`asset ${path}: HTTP ${res.status}`);
-  const svgText = await res.text();
-  if (!svgText.includes('<svg')) throw new Error(`asset ${path}: not an SVG`);
-  const blob = new Blob([svgText], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const im = new Image();
-      im.onload = () => resolve(im);
-      im.onerror = () => reject(new Error(`asset ${path}: image decode failed`));
-      im.src = url;
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = px;
-    canvas.height = px;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, px, px);
-    ctx.drawImage(img, 0, 0, px, px);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.anisotropy = 4;
-    tex.needsUpdate = true;
-    return tex;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 // --- placeholder: a clearly-colored rounded tile with a role glyph ----------
@@ -150,20 +114,9 @@ export class Assets {
 
   static async load() {
     const a = new Assets();
-    let manifest;
-    try {
-      if (INLINE && INLINE.manifest) {
-        manifest = INLINE.manifest; // single-file build: zero network
-      } else {
-        const res = await fetch(ASSET_BASE + 'manifest.json');
-        if (!res.ok) throw new Error(`manifest HTTP ${res.status}`);
-        manifest = await res.json();
-      }
-    } catch (e) {
-      // No manifest at all -> still don't crash: empty registry, callers fall back.
-      console.warn('[assets] manifest missing, running on placeholders only:', e.message);
-      manifest = { sprites: [] };
-    }
+    // The manifest is bundled (JSON import) — same object in both builds, no
+    // runtime fetch, and it can never be "missing" without the build failing.
+    const manifest = manifestJson;
     a.manifest = manifest;
     a.colorMap = manifest.colorMap ?? {};
     a.gameplayColors = manifest.gameplayColors ?? {};

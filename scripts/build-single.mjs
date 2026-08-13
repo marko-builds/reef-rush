@@ -45,15 +45,16 @@ assert(!js.includes('</script'), 'bundle contains a </script token and cannot be
 //        manifest-relative originals) --------------------------------------
 const assetsDir = path.join(root, 'public', 'assets');
 const manifest = JSON.parse(readFileSync(path.join(assetsDir, 'manifest.json'), 'utf8'));
-delete manifest._comment; // dead bytes in the packaged file
 const files = {};
 for (const s of manifest.sprites) {
   const p = path.join(assetsDir, s.path);
   assert(statSync(p).isFile(), `manifest sprite missing on disk: ${s.path}`);
   files[s.path] = 'data:image/png;base64,' + readFileSync(p).toString('base64');
 }
+// The manifest itself is BUNDLED (assets.js imports the JSON), so only the
+// data-URI file map is injected — assets.js reads __RR_ASSETS.files.
 const inlineBlock =
-  `<script>window.__RR_ASSETS=${JSON.stringify({ manifest, files })};</script>`;
+  `<script>window.__RR_ASSETS=${JSON.stringify({ files })};</script>`;
 
 // --- 4. splice the HTML --------------------------------------------------------
 // coin HUD <img>: runtime-fetched file -> data URI
