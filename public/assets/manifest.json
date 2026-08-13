@@ -9,6 +9,7 @@
 
     { "id": "pig_c1", "path": "sprites/pig_c1.png", "role": "pig", "colorKey": "C1", "layer": "L2", "scale": 1.0, "anchor": "center" },
     { "id": "pig_c4", "path": "sprites/pig_c4.png", "role": "pig", "colorKey": "C4", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "pig_g",  "path": "sprites/pig_g.png",  "role": "pig", "colorKey": "G",  "layer": "L2", "scale": 1.0, "anchor": "center" },
 
     { "id": "treasure", "path": "sprites/treasure.png", "role": "treasure", "layer": "L2", "scale": 1.0, "anchor": "center" },
 

@@ -114,7 +114,11 @@ async function boot() {
 
   board = new Board(scene, assets, level);
   conveyor = new Conveyor(board);
-  pigs = new PigManager(scene, board, conveyor, assets, level);
+  // Round 2: ONE scripted golden fish — the existing goldenHead boot option
+  // guarantees one golden lane HEAD from t=0 (deterministic, tappable right
+  // away; goldenChance stays 0 so no random goldens land on top of it). The
+  // rng argument stays at its random default (undefined -> default param).
+  pigs = new PigManager(scene, board, conveyor, assets, level, undefined, { goldenHead: true });
   treasure = buildTreasure();
 
   buildBeltVisual();

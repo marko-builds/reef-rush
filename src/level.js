@@ -130,9 +130,10 @@ export const CONFIG = {
   waitingSlots: 5,       // the "X/5"
   laneCount: 4,          // independent queue lanes (only the 4 heads launchable)
   laneDepth: 6,          // pigs kept per lane (3 visible + 3 off-screen reserve)
-  goldenChance: 0,       // golden pigs are OFF in the playable-ad build (the
-                         // pig_g sprite is dropped by the asset diet; one level
-                         // never rolls the bonus anyway).
+  goldenChance: 0,       // RANDOM golden pigs stay OFF: the one golden in the ad
+                         // is SCRIPTED (main.js boots PigManager with
+                         // { goldenHead: true }), so the moment is guaranteed
+                         // and deterministic instead of a rare roll.
   goldenAmmo: 5,         // a golden pig's fixed ammo (1 ammo = 1 block hit, as
                          // for every pig; the pierce's 2nd hit needs ammo left).
   ammoMin: 8,            // infinite-reserve ammo roll, uniform [ammoMin, ammoMax].
