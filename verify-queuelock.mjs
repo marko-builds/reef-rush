@@ -7,7 +7,7 @@
 // blocks so its queued pigs go massively over-quota and trigger the sync.
 // Assert: rows 0-2 of all 4 lanes are bit-identical (same pig objects, same
 // color/ammo); the cut happened in the reserve rows only.
-// Run: node verify-queuelock.mjs   (from styled_fof_version/)
+// Run: node verify-queuelock.mjs   (from the repo root)
 
 import { Board } from './src/board.js';
 import { Conveyor } from './src/conveyor.js';

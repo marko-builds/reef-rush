@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Reef Rush — a ~25 second single-level playable-ad conversion of an original Three.js reef color-shooter.",
+  "description": "Reef Rush, a 25 second single-level HTML5 playable ad demo. Original Three.js code and art.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
