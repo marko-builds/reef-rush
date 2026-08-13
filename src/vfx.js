@@ -79,15 +79,18 @@ const COIN_SPEED_Y_MAX = CELL * 4.6;
 // radial burst + a white flash over the whole blast square + a brief screen shake.
 const MINE_PULSE_S    = 0.8;     // idle glow throb loop — faster than the wild 1.2s
 const MINE_PULSE_SCALE = 0.03;   // ±3% scale breath on top of the color throb
-const BOOM_COUNT  = 26;          // radial burst particles (needs.md: 20-30)
+const BOOM_COUNT  = 42;          // radial burst particles (Round 2 juice pass:
+                                 // up from 26 — the blast is the ad's peak beat)
 const BOOM_LIFE   = 0.55;        // s — lingers past a 320ms pop, gone before 600ms
-const BOOM_SIZE   = CELL * 0.42; // bigger chunks than a pop sparkle (0.30)
+const BOOM_SIZE   = CELL * 0.5;  // bigger chunks than a pop sparkle (0.30;
+                                 // Round 2: up from 0.42 with the fuller burst)
 const BOOM_SPEED  = CELL * 5.2;  // much faster than POP_SPEED 2.4 — a real blast
 const BOOM_TINTS  = [0xff5a2a, 0xffa53d, 0xffe27a, 0xffffff]; // ember..white-hot
 const FLASH_DUR   = 0.28;        // white flash over the blast square, easeOutCubic
 const FLASH_OPACITY = 0.75;
 const FLASH_SIZE  = CELL * 3.2;  // covers the 3x3-cell blast square + soft margin
-const SHAKE_AMP   = 0.15;        // world units (needs.md)
+const SHAKE_AMP   = 0.26;        // world units (Round 2 juice pass: up from 0.15
+                                 // so the boom lands physically; decay unchanged)
 const SHAKE_DECAY = 0.85;        // amplitude multiplier per 60fps frame (delta-timed)
 
 // Phase 4 SEAWEED WRAPS (spec: Seaweed-wrapped blocks) — the armor overlay quad
@@ -131,9 +134,10 @@ const PART_POOL   = 220;    // covers POP_COUNT bursts overlapping + the win cas
 
 export class VfxLayer {
   constructor(scene, assets, board, conveyor, pigs, slotRack, opts = {}) {
-    // Phase 5 (5.11 win screen): the level-5 TREASURE finale rains a bigger
-    // coin burst (30-40 per the playbook) than the per-level clear (16).
-    this._rainCount = opts.finaleRain ? 32 : null; // null -> COIN_RAIN_COUNT
+    // Phase 5 (5.11 win screen): the TREASURE finale rains a bigger coin burst
+    // than the per-level clear (16). Round 2 juice pass: 32 -> 48 for a fuller
+    // fountain under the slowed reveal.
+    this._rainCount = opts.finaleRain ? 48 : null; // null -> COIN_RAIN_COUNT
     this.scene = scene;
     this.assets = assets;
     this.board = board;

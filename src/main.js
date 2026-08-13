@@ -162,21 +162,42 @@ function buildTreasure() {
   const p = board.cellToWorld(level.treasure.col, level.treasure.row);
   mesh.position.set(p.x, p.y, -0.12); // behind the tiles, in front of the vignette
   scene.add(mesh);
-  return { mesh, geo, mat, phase: 0, winAge: -1, baseX: p.x, baseY: p.y };
+  // Round 2 juice: a soft golden GLOW quad behind the treasure — invisible in
+  // idle, faded in + pulsed through the slowed win reveal so the pearl reads
+  // as radiating. Reuses the particle sprite (soft radial disc), gold-tinted.
+  const glowRec = assets.get('particle');
+  const glowGeo = new THREE.PlaneGeometry(size * 2.4, size * 2.4);
+  const glowMat = new THREE.MeshBasicMaterial({
+    map: glowRec ? glowRec.texture : null, color: 0xffe27a,
+    transparent: true, opacity: 0, depthWrite: false,
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.visible = false;
+  glow.position.set(p.x, p.y, 0.38); // just under the celebrating treasure (0.4)
+  scene.add(glow);
+  return { mesh, geo, mat, glow, glowGeo, glowMat, phase: 0, winAge: -1, baseX: p.x, baseY: p.y };
 }
 
-const TREASURE_POP_DUR = 0.8; // easeOutBack grow on the final win
+// Round 2 juice pass: the reveal beat is SLOWED (0.8s -> 2.0s grow) so the
+// treasure moment breathes; the end card waits for it (see updateBanner).
+const TREASURE_POP_DUR = 2.0; // easeOutBack grow on the final win
 function updateTreasure(dt) {
   if (!treasure) return;
   if (pigs.state === 'won') {
-    // celebration: pop forward + grow + gentle bob/spin (delta-timed)
+    // celebration: pop forward + grow + gentle bob/spin (delta-timed),
+    // plus the Round 2 glow fade-in and a soft scale pulse on top of the grow.
     if (treasure.winAge < 0) treasure.winAge = 0;
     treasure.winAge += dt;
     const grow = easeOutBack(clamp01(treasure.winAge / TREASURE_POP_DUR));
+    const pulse = 1 + 0.05 * Math.sin(treasure.winAge * 5.0);
     treasure.mesh.position.z = 0.4; // in front — the reef is cleared
-    treasure.mesh.scale.setScalar(1 + 1.1 * grow);
+    treasure.mesh.scale.setScalar((1 + 1.1 * grow) * pulse);
     treasure.mesh.rotation.z = 0.12 * Math.sin(treasure.winAge * 2.2);
     treasure.mesh.position.y = treasure.baseY + 0.15 * Math.sin(treasure.winAge * 1.6);
+    treasure.glow.visible = true;
+    treasure.glow.position.y = treasure.mesh.position.y;
+    treasure.glowMat.opacity = 0.55 * grow * (0.8 + 0.2 * Math.sin(treasure.winAge * 4.0));
+    treasure.glow.scale.setScalar((1 + 0.9 * grow) * (1 + 0.08 * Math.sin(treasure.winAge * 3.2)));
     return;
   }
   treasure.phase = (treasure.phase + 0.4 * dt) % 1; // idle shimmer-breath
@@ -704,6 +725,7 @@ function updateHud() {
 // loss via tryRetry.
 let titleActive = false;       // title overlay shown, first tap dismisses it
 let bannerStateShown = 'playing';
+let winCardShown = false;      // end card latch (gated behind the reveal)
 function updateBanner() {
   const state = pigs.state;
   if (state === 'playing') {
@@ -712,6 +734,7 @@ function updateBanner() {
       winVignetteEl.classList.remove('in');
       loseScreenEl.classList.remove('in');
       bannerStateShown = 'playing';
+      winCardShown = false;
     }
     return;
   }
@@ -719,11 +742,18 @@ function updateBanner() {
     bannerStateShown = state;
     dismissHint();
     if (state === 'won') {
-      winScreenEl.classList.add('in');
+      // Round 2: the vignette starts at once, but the END CARD waits for the
+      // slowed treasure reveal to finish (winAge-gated below) — the card must
+      // never cover the moment it celebrates.
       winVignetteEl.classList.add('in'); // golden vignette, 1s fade
     } else {
       loseScreenEl.classList.add('in');
     }
+  }
+  if (state === 'won' && !winCardShown &&
+      (!treasure || treasure.winAge >= TREASURE_POP_DUR)) {
+    winCardShown = true;
+    winScreenEl.classList.add('in');
   }
 }
 
