@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reef Rush</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        /* v3: deep turquoise base so any uncovered edge reads as sea, not grey. */
+        background: #0d5d77;
+        overflow: hidden;
+        font-family: system-ui, sans-serif;
+      }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; }
+
+      /* DOM overlay for text (ammo, counters). v3: ammo number sits on the reef
+         critter, so it gets a strong dark halo to stay legible over bright sprites. */
+      #ui { position: fixed; inset: 0; pointer-events: none; }
+      .label {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        /* layered dark halo: readable over any candy-bright critter or the sea. */
+        text-shadow:
+          0 0 2px #04303d, 0 0 3px #04303d, 0 0 4px #04303d,
+          0 1px 1px #000, 0 -1px 1px #000;
+        user-select: none;
+      }
+      #hud {
+        position: fixed;
+        top: 58px;
+        left: 12px;
+        color: #eafcff;
+        font-size: 13px;
+        line-height: 1.5;
+        text-shadow: 0 1px 3px #04303d, 0 0 4px #04303d;
+        white-space: pre;
+      }
+      /* COIN COUNTER — top-right: the gold coin icon (slow Y-spin glint) + the
+         run total. The number ROLLS UP in main.js (never snaps); the glassy
+         pill keeps it legible over the bright sea. Pure UI — pointer-events
+         off. */
+      #coinHud {
+        position: fixed;
+        top: 10px;
+        right: 12px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 14px 0 10px;
+        border-radius: 20px;
+        background: rgba(8, 60, 76, 0.55);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(234, 252, 255, 0.25);
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #coinHud img {
+        width: 24px;
+        height: 24px;
+        display: block;
+        animation: coinSpin 3s ease-in-out infinite;
+      }
+      @keyframes coinSpin {
+        0%, 100% { transform: rotateY(0deg); }
+        50%      { transform: rotateY(180deg); }
+      }
+      #coinCount {
+        color: #ffe98a;
+        font-size: 17px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 1px 3px #04303d, 0 0 4px #04303d;
+      }
+      /* MUTE TOGGLE — top-left (the corners are free; #hud text starts at 58px).
+         Sits directly in <body>, NOT inside #ui (which is pointer-events:none),
+         and carries its own pointer-events:auto so it is tappable either way.
+         Sound is gesture-gated: the click itself resumes the AudioContext in
+         main.js, so muting before ever touching the canvas still works. */
+      #muteBtn {
+        position: fixed;
+        top: 10px;
+        left: 12px;
+        z-index: 9;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(8, 60, 76, 0.55);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(234, 252, 255, 0.25);
+        color: #eafcff;
+        font-size: 19px;
+        line-height: 40px;
+        text-align: center;
+        padding: 0;
+        cursor: pointer;
+        pointer-events: auto;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      /* ===== UI screens — reef panel language:
+         semi-transparent aqua glass,
+         warm gold border, rounded corners, easeOutBack entrances. ========== */
+
+      /* Shared overlay + card. */
+      .screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 8;
+        /* taps fall through to the canvas (tap-anywhere advance); only the
+           card buttons take pointer input */
+        pointer-events: none;
+      }
+      .card button { pointer-events: auto; }
+      .screen.in { display: flex; }
+      /* Player direction (final): every card anchors at the BOARD CENTER
+         (top 36% in the locked framing) — title, jammed and treasure screens
+         share the level-cleared popup's home, so all end states are coherent. */
+      .card {
+        position: absolute;
+        top: 36%;
+        left: 50%;
+        background: rgba(8, 60, 76, 0.78);
+        border: 3px solid rgba(255, 226, 122, 0.75);
+        border-radius: 18px;
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+        padding: 30px 48px;
+        text-align: center;
+        color: #eafcff;
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 0;
+        transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease-out;
+      }
+      .screen.in .card { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      .card h1 {
+        margin: 0 0 6px;
+        font-size: 44px;
+        font-weight: 800;
+        color: #ffe08a;
+        text-shadow: 0 2px 0 #b87f17, 0 4px 14px rgba(0, 0, 0, 0.4);
+        letter-spacing: 0.01em;
+      }
+      .card .sub { font-size: 17px; opacity: 0.9; margin: 4px 0 0; }
+      .card .tap {
+        margin-top: 22px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #ffe98a;
+        letter-spacing: 0.06em;
+        animation: tapPulse 1s ease-in-out infinite;
+      }
+      @keyframes tapPulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+      .card button {
+        margin-top: 20px;
+        padding: 12px 34px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffd86b, #f0a93a);
+        color: #2a1606;
+        font-size: 19px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        transition: transform 90ms ease;
+      }
+      .card button:hover { transform: scale(1.05); }
+      .card button:active { transform: scale(0.95); }
+      /* Secondary CTA on the retry card: quieter than TRY AGAIN, same shape. */
+      .card button.cta-secondary {
+        margin-left: 12px;
+        background: rgba(8, 60, 76, 0.6);
+        color: #ffe98a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 226, 122, 0.55);
+      }
+
+      /* Title screen: dimming veil; the live sea keeps running behind it. */
+      #titleScreen { background: rgba(6, 48, 61, 0.45); transition: opacity 300ms ease-out; }
+      #titleScreen.out { opacity: 0; pointer-events: none; }
+
+      /* First-load HINT: a pulsing gold ring anchored on the first tappable
+         lane-head fish (positioned from world space each frame in main.js) +
+         one instruction line below it. Dismissed on the first tap. */
+      #hint {
+        position: fixed;
+        left: -1000px;
+        top: -1000px;
+        display: none;
+        z-index: 6;
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #hint.in { display: block; }
+      #hint .ring {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 74px;
+        height: 74px;
+        margin: -37px 0 0 -37px;
+        border: 4px solid #ffe27a;
+        border-radius: 50%;
+        box-shadow: 0 0 14px rgba(255, 226, 122, 0.8), inset 0 0 10px rgba(255, 226, 122, 0.5);
+        animation: hintPulse 1.1s ease-in-out infinite;
+      }
+      @keyframes hintPulse {
+        0%, 100% { transform: scale(0.85); opacity: 0.9; }
+        50%      { transform: scale(1.12); opacity: 0.5; }
+      }
+      #hint .line {
+        /* horizontally centered on the SCREEN (the ring tracks the fish, which
+           can sit near an edge; the text must never clip). Top is set from
+           main.js each frame, just above the ring. */
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        padding: 8px 16px;
+        border-radius: 14px;
+        background: rgba(8, 60, 76, 0.85);
+        box-shadow: inset 0 0 0 1px rgba(255, 226, 122, 0.45);
+        color: #eafcff;
+        font-size: 15px;
+        font-weight: 700;
+        text-shadow: 0 1px 3px #04303d;
+      }
+
+      /* Win screen: golden radial vignette fading in over 1s under the card. */
+      #winVignette {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at center,
+          rgba(255, 216, 107, 0) 35%, rgba(240, 169, 58, 0.28) 75%, rgba(184, 127, 23, 0.5) 100%);
+        opacity: 0;
+        transition: opacity 1s ease-out;
+        pointer-events: none;
+        z-index: 7;
+      }
+      #winScreen.in ~ #winVignette, #winVignette.in { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="ui"></div>
+    <div id="hud"></div>
+    <div id="coinHud" aria-label="Coins">
+      <img src="assets/sprites/coin.png" alt="" />
+      <span id="coinCount">0</span>
+    </div>
+    <button id="muteBtn" type="button" aria-label="Toggle sound">&#x1F50A;</button>
+    <div id="titleScreen" class="screen">
+      <div class="card">
+        <h1>Reef Rush</h1>
+        <p class="sub">A reef conveyor puzzle. Clear every tile, mind the buckets.</p>
+        <div class="tap">TAP TO PLAY</div>
+      </div>
+    </div>
+    <div id="hint">
+      <div class="ring"></div>
+      <div class="line">Tap a fish that matches an open block</div>
+    </div>
+    <div id="winVignette"></div>
+    <div id="winScreen" class="screen">
+      <div class="card">
+        <h1>Reef Rush</h1>
+        <p class="sub">A 25 second reef puzzle. Original code and art.</p>
+        <button id="winCtaBtn" type="button">SEE MORE</button>
+      </div>
+    </div>
+    <div id="loseScreen" class="screen">
+      <div class="card">
+        <h1>So close</h1>
+        <p class="sub">The buckets jammed. One more try clears the reef.</p>
+        <button id="loseRetryBtn" type="button">TRY AGAIN</button>
+        <button id="loseCtaBtn" type="button" class="cta-secondary">SEE MORE</button>
+      </div>
+    </div>
+    <!-- MRAID: the ad network's webview serves this file; on a plain web host
+         it 404s harmlessly and the game starts immediately (mraid undefined). -->
+    <script src="mraid.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

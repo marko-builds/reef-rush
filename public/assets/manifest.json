@@ -1,0 +1,32 @@
+{
+  "_comment": "Runtime manifest the Reef Rush playable fetches at boot (the single-file build inlines it instead). PNG sprites only. Missing path -> labelled placeholder, never a crash. The ad level uses TWO palette slots: C1 coral, C4 treasure gold. cube_cN and pig_cN share an unmistakable hue per slot (a bait clears cubes of its OWN color). colorKey is the build-agnostic slot; firing matches by key STRING so gameplay is untouched. 'treasure' is the centerpiece revealed by clearing the ring.",
+  "colorMap": { "c1": "C1", "c4": "C4" },
+  "gameplayColors": { "C1": "#ff6a3d", "C4": "#ffc91f" },
+  "sprites": [
+    { "id": "cube_c1", "path": "sprites/cube_c1.png", "role": "cube", "colorKey": "C1", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "cube_c4", "path": "sprites/cube_c4.png", "role": "cube", "colorKey": "C4", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "cube_m",  "path": "sprites/cube_m.png",  "role": "cube", "colorKey": "M",  "layer": "L2", "scale": 1.0, "anchor": "center" },
+
+    { "id": "pig_c1", "path": "sprites/pig_c1.png", "role": "pig", "colorKey": "C1", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "pig_c4", "path": "sprites/pig_c4.png", "role": "pig", "colorKey": "C4", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "pig_g",  "path": "sprites/pig_g.png",  "role": "pig", "colorKey": "G",  "layer": "L2", "scale": 1.0, "anchor": "center" },
+
+    { "id": "treasure", "path": "sprites/treasure.png", "role": "treasure", "layer": "L2", "scale": 1.0, "anchor": "center" },
+
+    { "id": "seaweed", "path": "sprites/seaweed.png", "role": "overlay", "layer": "L2", "scale": 1.0, "anchor": "center" },
+
+    { "id": "coin",         "path": "sprites/coin.png",         "role": "coin",     "layer": "L4", "scale": 1.0, "anchor": "center" },
+    { "id": "shot",         "path": "sprites/shot.png",         "role": "shot",     "layer": "L4", "scale": 1.0, "anchor": "center" },
+    { "id": "particle",     "path": "sprites/particle.png",     "role": "particle", "layer": "L4", "scale": 1.0, "anchor": "center" },
+    { "id": "belt_segment", "path": "sprites/belt_segment.png", "role": "belt",     "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "belt_angled",  "path": "sprites/belt-angled-segment.png", "role": "belt", "layer": "L2", "scale": 1.0, "anchor": "center" },
+    { "id": "slot",         "path": "sprites/slot.png",         "role": "slot",     "layer": "L3", "scale": 1.0, "anchor": "center" },
+
+    { "id": "bgfish_blue",   "path": "sprites/blue_fish.png",   "role": "fish", "layer": "L1", "scale": 1.0, "anchor": "center", "faces": "right", "count": 2 },
+    { "id": "bgfish_yellow", "path": "sprites/yellow_fish.png", "role": "fish", "layer": "L1", "scale": 1.0, "anchor": "center", "faces": "right", "count": 2 },
+    { "id": "bgfish_clown",  "path": "sprites/clownfish.png",   "role": "fish", "layer": "L1", "scale": 1.0, "anchor": "center", "faces": "right", "count": 2 },
+    { "id": "coral_bg",    "path": "sprites/corals.png",      "role": "coral", "layer": "L0", "scale": 1.0, "anchor": "bottom" },
+    { "id": "kelp",        "path": "sprites/kelp.png",        "role": "kelp",   "layer": "L1", "scale": 1.0,  "anchor": "bottom", "count": 5 },
+    { "id": "bubble",      "path": "sprites/bubble.png",      "role": "bubble", "layer": "L1", "scale": 0.5,  "anchor": "center", "drift": { "speed": 0.8, "dir": "up" }, "count": 14 }
+  ]
+}
