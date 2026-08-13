@@ -1,7 +1,10 @@
 // Headless verification (Phase 4 feature 1) — coin counting, headless.
-// Clears level 1 with the same greedy policy as verify-winnability.mjs, draining
-// pigs.vfx[] each step the way the render side does, and counts coins off the
-// 'fire' events (1/block; 'W' would be 3 — none in level 1). Expect 324.
+// Clears the ad level with the same greedy policy as verify-winnability.mjs,
+// draining pigs.vfx[] each step and awarding coins EXACTLY like main.js's
+// updateCoins: a dewrap peel = 0, 'M' = 0, 'W' = 3, everything else 1, and a
+// 'mineExplode' awards per destroyed block (the blast emits no fire events).
+// Asserts the destruction accounting too: every block dies exactly once, via
+// a destroying shot or the blast, and each wrapped sub-block peels once.
 import { Board } from './src/board.js';
 import { Conveyor } from './src/conveyor.js';
 import { PigManager } from './src/pigs.js';
@@ -37,8 +40,11 @@ function firstAlive(sub, dir) {
   return null;
 }
 
-let coins = 0, fireEvents = 0;
+let coins = 0, fireDestroys = 0, dewraps = 0, blastBlocks = 0;
+const coinAward = (c) => (c === 'W' ? 3 : c === 'M' ? 0 : 1); // mirrors main.js
 const totalBlocks = board.aliveCount();
+const mineSubs = board.blocks.filter((b) => b.colorKey === 'M').length;
+const wrappedSubs = board.blocks.filter((b) => b.wrapped).length;
 let steps = 0;
 while (pigs.state === 'playing' && steps < 600000) {
   if (steps % 6 === 0) {
@@ -113,15 +119,28 @@ while (pigs.state === 'playing' && steps < 600000) {
   pigs.update(DT);
   // drain the event queue exactly like the render side (main.js updateCoins)
   for (const ev of pigs.vfx) {
-    if (ev.type === 'fire') { fireEvents++; coins += ev.blockColor === 'W' ? 3 : 1; }
+    if (ev.type === 'fire') {
+      if (ev.dewrap) dewraps++; // peels armor, destroys nothing, awards nothing
+      else { fireDestroys++; coins += coinAward(ev.blockColor); }
+    } else if (ev.type === 'mineExplode') {
+      for (const b of ev.blocks) { blastBlocks++; coins += coinAward(b.blockColor); }
+    }
   }
   pigs.vfx.length = 0;
   steps++;
 }
 
-console.log(`level 1 "Halves": blocks ${totalBlocks} -> ${board.aliveCount()}, state='${pigs.state}', steps=${steps}`);
-console.log(`fire events: ${fireEvents}  (expect ${totalBlocks} — one per destroyed small block)`);
-console.log(`coins:       ${coins}  (expect ${totalBlocks} — flat 1/block on level 1)`);
-const pass = pigs.state === 'won' && fireEvents === totalBlocks && coins === totalBlocks;
+// Every block dies exactly once (by shot or blast); each wrapped sub-block
+// peels exactly once; the coin total is destroyed blocks minus the 0-award
+// mine sub-blocks (the ad level has no wilds).
+const expectCoins = totalBlocks - mineSubs;
+console.log(`"${level.name}": blocks ${totalBlocks} -> ${board.aliveCount()}, state='${pigs.state}', steps=${steps}`);
+console.log(`destroying shots: ${fireDestroys}  + blast blocks: ${blastBlocks}  (expect ${totalBlocks} together)`);
+console.log(`dewrap peels:     ${dewraps}  (expect ${wrappedSubs} — one per wrapped sub-block)`);
+console.log(`coins:            ${coins}  (expect ${expectCoins} — 1/block, mine sub-blocks award 0)`);
+const pass = pigs.state === 'won' &&
+  fireDestroys + blastBlocks === totalBlocks &&
+  dewraps === wrappedSubs &&
+  coins === expectCoins;
 console.log(pass ? 'PASS' : 'FAIL');
 process.exit(pass ? 0 : 1);

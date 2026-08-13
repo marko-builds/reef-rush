@@ -1,7 +1,7 @@
 // Headless verification (Phase 4 feature 5) — seaweed-wrapped blocks.
 // needs.md 5c tests + the data-model/coverage checks:
-//   A) level-4 board printout: wraps cover ROW 4 only (mine cell excluded);
-//      level-5 wraps cover ROW 2; wrapped sub-block counts are exact
+//   A) ad-level board printout: wraps cover exactly the two coral accents
+//      (cols 1 and 7, row 3); wrapped sub-block counts are exact
 //   B) two same-color shots: 1st DEWRAPS (alive, ammo -1, event dewrap:true),
 //      2nd DESTROYS (alive=false, ammo -1, event dewrap:false)
 //   C) wrong-color shot at a wrapped front -> BLOCKED (no dewrap, no ammo)
@@ -22,8 +22,8 @@ const check = (label, cond) => { allPass = allPass && cond; console.log(`  ${con
 // (A) data model + authored coverage. Printout: UPPERCASE = plain cell,
 // lowercase = WRAPPED cell, '.' = empty — so the wrap rows read at a glance.
 // ---------------------------------------------------------------------------
-console.log('=== (A) authored wrap coverage (L4 row 4, L5 row 2) ===');
-for (const level of [LEVELS[3], LEVELS[4]]) {
+console.log('=== (A) authored wrap coverage (ad level: the two coral accents, row 3) ===');
+for (const level of [LEVELS[0]]) {
   const cubes = expandPattern(level);
   const byCell = new Map(cubes.map((c) => [c.col + ',' + c.row, c]));
   console.log(`  L${level.id} "${level.name}" board (lowercase = wrapped):`);
@@ -38,10 +38,11 @@ for (const level of [LEVELS[3], LEVELS[4]]) {
     console.log(line);
   }
   const wrappedCells = cubes.filter((c) => c.wrapped);
-  const expectRow = level.id === 4 ? 4 : 2;
-  const expectCount = level.id === 4 ? 8 : 9;
-  check(`L${level.id}: ${expectCount} wrapped cells, all on row ${expectRow}`,
-    wrappedCells.length === expectCount && wrappedCells.every((c) => c.row === expectRow));
+  const expectCount = level.wraps.length; // the two coral accents
+  check(`L${level.id}: ${expectCount} wrapped cells at cols 1 and 7, both on row 3`,
+    wrappedCells.length === expectCount &&
+    wrappedCells.every((c) => c.row === 3) &&
+    wrappedCells.map((c) => c.col).sort().join(',') === '1,7');
   check(`L${level.id}: no wild/mine cell is wrapped`,
     wrappedCells.every((c) => c.color !== 'W' && c.color !== 'M'));
   const board = new Board(scene, null, level);

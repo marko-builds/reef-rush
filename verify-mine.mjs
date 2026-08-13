@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { Board } from './src/board.js';
 import { Conveyor } from './src/conveyor.js';
 import { PigManager } from './src/pigs.js';
-import { LEVELS, makeRng } from './src/level.js';
+import { LEVELS, expandPattern, makeRng } from './src/level.js';
 
 const scene = { add() {}, remove() {} };
 const board = new Board(scene, null, LEVELS[0]);
@@ -131,10 +131,16 @@ console.log('\n=== (3) slots full of C1 pigs, only the MINE exposed -> reachable
   check(`control: without the mines the same jam IS the lockup (state 'lost')`, pigs.state === 'lost');
 }
 
-console.log('\n=== Board printouts (mine + wild placement, levels 2-5) ===');
-for (const level of LEVELS.slice(1)) {
+console.log('\n=== Board printout + authored mine placement (the ad level) ===');
+for (const level of LEVELS) {
   console.log(`  L${level.id} "${level.name}" (pattern row 0 = TOP):`);
   for (const row of level.pattern) console.log(`    ${row}`);
+  // This loop once printed levels 2-5 of the source roster; after the single-
+  // ad-level cut it iterated NOTHING and could not fail. Assert the placement:
+  // exactly one mine, in the ring's bottom edge (col 4, world row 4).
+  const mines = expandPattern(level).filter((c) => c.color === 'M');
+  check(`L${level.id}: exactly one authored mine, at col 4 row 4`,
+    mines.length === 1 && mines[0].col === 4 && mines[0].row === 4);
 }
 
 console.log('\n' + (allPass ? '=== ALL MINE-BLOCK CHECKS PASS ===' : '=== MINE-BLOCK CHECKS FAILED ==='));

@@ -12,7 +12,7 @@
 import { Board } from './src/board.js';
 import { Conveyor } from './src/conveyor.js';
 import { PigManager, VISIBLE_ROWS } from './src/pigs.js';
-import { LEVELS, CONFIG, makeRng } from './src/level.js';
+import { CONFIG, makeRng } from './src/level.js';
 
 const scene = { add() {}, remove() {} };
 
@@ -27,9 +27,28 @@ const snapshot = (pigs) =>
 const fmt = (rows) =>
   rows.map((lane, li) => `lane${li}[` + lane.map((e) => `${e.colorKey}:${e.ammo}`).join(' ') + ']').join('  ');
 
+// The shipped roster is the ONE ad level, so the drill authors its own fixture:
+// a Bullseye-style two-color board (a C1 shell around a buried C2 core) with
+// plenty of stale-pig pressure once the shell color is slaughtered below.
+const FIXTURE = {
+  id: 99,
+  name: 'Queue-lock fixture',
+  colors: ['C1', 'C2'],
+  pattern: [
+    '.........',
+    '.AAAAAAA.',
+    '.ABBBBBA.',
+    '.ABBBBBA.',
+    '.ABBBBBA.',
+    '.ABBBBBA.',
+    '.ABBBBBA.',
+    '.AAAAAAA.',
+    '.........',
+  ],
+};
+
 for (const seed of [1, 2, 3]) {
-  // Level 2 (Bullseye) has a buried color — plenty of stale-pig pressure.
-  const level = LEVELS[1];
+  const level = FIXTURE;
   const board = new Board(scene, null, level);
   const conveyor = new Conveyor(board);
   const pigs = new PigManager(scene, board, conveyor, null, level, makeRng(seed));
