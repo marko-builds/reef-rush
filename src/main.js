@@ -76,6 +76,11 @@ function resize() {
     seascape.viewH = halfH * 2;
     seascape.layout();
   }
+  // Keep the lane reserve (rows 3+) parked below the REAL bottom edge: the
+  // portrait zoom-out above grows the visible height, and the reserve — which
+  // the lane sync swaps mid-game — must never come into view. (No-op before
+  // boot; boot's own resize() call runs after the PigManager exists.)
+  if (pigs) pigs.setReserveFloor(CAMERA_Y - halfH - PIG_SIZE);
 }
 window.addEventListener('resize', resize);
 
