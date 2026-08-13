@@ -12,6 +12,8 @@
 
     { "id": "treasure", "path": "sprites/treasure.png", "role": "treasure", "layer": "L2", "scale": 1.0, "anchor": "center" },
 
+    { "id": "seaweed", "path": "sprites/seaweed.png", "role": "overlay", "layer": "L2", "scale": 1.0, "anchor": "center" },
+
     { "id": "coin",         "path": "sprites/coin.png",         "role": "coin",     "layer": "L4", "scale": 1.0, "anchor": "center" },
     { "id": "shot",         "path": "sprites/shot.png",         "role": "shot",     "layer": "L4", "scale": 1.0, "anchor": "center" },
     { "id": "particle",     "path": "sprites/particle.png",     "role": "particle", "layer": "L4", "scale": 1.0, "anchor": "center" },

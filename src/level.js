@@ -71,6 +71,11 @@ export const LEVELS = [
     // The center '.' pocket (pattern row 3, col 4 -> world row 5) holds the
     // treasure, revealed by the final clear (the existing finale mechanic).
     treasure: { col: 4, row: 5 },
+    // Round 2: the two coral accents start SEAWEED-WRAPPED (pattern row index 5
+    // -> world row 3; cols 1 and 7). Each wrapped sub-block takes a peel hit
+    // before its destroy hit, so the two accents teach the armor beat (+8 hits
+    // total; the winnability harness counts wrapped blocks as 2).
+    wraps: [{ col: 1, row: 3 }, { col: 7, row: 3 }],
   },
 ];
 
